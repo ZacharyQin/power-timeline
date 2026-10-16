@@ -88,6 +88,71 @@ def downsample(read_points, max_points):
     return result
 
 
+class ChargeHistory:
+    """Charge boundaries come from persisted samples, never UI uptime."""
+    def __init__(self, sample_interval=1.0):
+        self.sample_interval = sample_interval
+        self.previous = None
+        self.ended = None
+        self.reason = "charge_end_unobserved"
+
+    def restore(self, connection):
+        self.previous, self.ended = None, None
+        self.reason = "charge_end_unobserved"
+        row = connection.execute("SELECT id FROM samples WHERE lower(json_extract(payload,'$.battery_state'))='charging' ORDER BY id DESC LIMIT 1").fetchone()
+        if row:
+            rows = connection.execute("SELECT timestamp,monotonic,boottime,json_extract(payload,'$.battery_state') AS battery_state FROM samples WHERE id>=? ORDER BY id", (row["id"],))
+        else:
+            rows = connection.execute("SELECT timestamp,monotonic,boottime,json_extract(payload,'$.battery_state') AS battery_state FROM samples ORDER BY id DESC LIMIT 1")
+        for sample in rows:
+            self.observe(sample)
+
+    def observe(self, sample):
+        state = str(sample["battery_state"]).lower()
+        gap = discontinuity(self.previous, sample, self.sample_interval) if self.previous is not None else None
+        if state == "charging":
+            self.ended = None
+            self.reason = "charging"
+        elif self.previous is not None and str(self.previous["battery_state"]).lower() == "charging":
+            if gap is None and state in ("full", "not charging", "discharging"):
+                self.ended = {"timestamp": sample["timestamp"], "boottime": sample["boottime"],
+                              "uncertainty_seconds": sample["timestamp"] - self.previous["timestamp"]}
+                self.reason = None
+            else:
+                self.reason = gap or "charge_end_unobserved"
+        elif self.ended is not None:
+            if gap is not None:
+                self.reason = gap
+            elif state not in ("full", "not charging", "discharging"):
+                self.reason = "battery_state_unknown"
+        self.previous = sample
+
+    def status(self, now, current_state, recording=True):
+        state = current_state.lower()
+        charging = state == "charging"
+        ended = None if charging else self.ended
+        reason = self.reason
+        if charging:
+            reason = "charging"
+        elif state not in ("full", "not charging", "discharging"):
+            reason = "battery_state_unknown"
+        elif reason == "charging":
+            reason = "charge_end_unobserved"
+        elapsed = None
+        if ended is not None and reason is None:
+            age = now - self.previous["timestamp"]
+            if not recording or age > 10:
+                reason = "sampling_stale"
+            elif age < 0:
+                reason = "clock_discontinuity"
+            else:
+                elapsed = self.previous["boottime"] - ended["boottime"] + age
+        return {"ended_at": ended["timestamp"] if ended else None,
+                "elapsed_seconds": elapsed,
+                "uncertainty_seconds": ended["uncertainty_seconds"] if ended else None,
+                "reason": reason or (None if ended else "charge_end_unobserved")}
+
+
 class Recorder:
     def __init__(self, runtime_dir: Path, sample_interval=1.0, max_bytes=256 * 1024 * 1024):
         if not number(sample_interval) or sample_interval <= 0:
@@ -107,6 +172,7 @@ class Recorder:
         self.active = {}
         self.names = {}
         self.latest = None
+        self.charging = ChargeHistory(sample_interval)
 
     def start(self):
         if self.db is not None:
@@ -119,6 +185,7 @@ class Recorder:
             self.names = {row["game_id"]: row["name"] for row in self.db.execute("SELECT * FROM games")}
             row = self.db.execute("SELECT payload FROM samples ORDER BY id DESC LIMIT 1").fetchone()
             self.latest = json.loads(row[0]) if row else None
+            self.charging.restore(self.db)
             self.previous = None
             self.previous_id = None
             self.active = {}
@@ -293,6 +360,7 @@ class Recorder:
             self.previous, self.previous_id, self.active = sample, sample_id, active
             self.segment, self.latest = segment, wire
             self.revision += 1
+            self.charging.observe(sample)
         except (sqlite3.Error, StorageFullError) as exc:
             self._storage_error(exc)
             raise

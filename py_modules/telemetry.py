@@ -58,7 +58,7 @@ class Telemetry:
                 continue
         self._next_discovery = time.monotonic() + 30
 
-    def read(self) -> dict:
+    def read_battery(self, include_details=False) -> dict:
         mono = time.monotonic()
         if mono >= self._next_discovery:
             self._discover()
@@ -86,6 +86,7 @@ class Telemetry:
                 result["battery_percent"] = percent
             except (OSError, ValueError) as exc:
                 errors["battery_percent"] = str(exc)
+            voltage, current = None, None
             try:
                 voltage = int((battery / "voltage_now").read_text())
                 current = int((battery / "current_now").read_text())
@@ -103,6 +104,14 @@ class Telemetry:
         else:
             errors["battery_percent"] = "battery_missing_or_ambiguous"
             errors["system_w"] = "battery_missing_or_ambiguous"
+        if include_details:
+            result["voltage_v"] = voltage / 1e6 if len(self.batteries) == 1 and voltage is not None and voltage > 0 else None
+            result["current_a"] = abs(current) / 1e6 if len(self.batteries) == 1 and current is not None else None
+        return result
+
+    def read(self) -> dict:
+        result = self.read_battery()
+        errors = result["errors"]
         if self.gpu_metrics:
             try:
                 result.update(decode_gpu_metrics(self.gpu_metrics.read_bytes()))

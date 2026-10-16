@@ -15,15 +15,18 @@ from py_modules.attribution import Attribution
 from py_modules.games import GameTracker
 from py_modules.recorder import Recorder, discontinuity
 from py_modules.telemetry import Telemetry
+from py_modules.power_info import PowerInfo
 
 
 class Plugin:
     async def _main(self):
         self._ready = asyncio.Event()
         self._task = None
+        self._stopping = False
         self._failure = None
         self._recorder = None
         self._tracker = None
+        self._power_info = None
         try:
             runtime = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR")
             if not runtime:
@@ -33,6 +36,7 @@ class Plugin:
             self._recorder = recorder
             self._tracker = GameTracker()
             self._telemetry = Telemetry()
+            self._power_info = PowerInfo(self._telemetry)
             self._attribution = Attribution()
             self._task = asyncio.create_task(self._record_loop())
             decky.logger.info("Power Timeline recorder started")
@@ -45,7 +49,7 @@ class Plugin:
     async def _record_loop(self):
         previous, previous_games = None, []
         try:
-            while True:
+            while not self._stopping:
                 began = time.monotonic()
                 sample = self._telemetry.read()
                 games = self._tracker.scan()
@@ -89,6 +93,12 @@ class Plugin:
             result["error"] = self._failure
         return result
 
+    async def get_power_info(self):
+        recorder = await self._require_recorder()
+        result = await self._power_info.read()
+        result["last_charge"] = recorder.charging.status(time.time(), result["battery"]["state"], recorder.status == "recording")
+        return result
+
     async def get_timeline(self, start, end, max_points=600):
         recorder = await self._require_recorder()
         return recorder.timeline(start, end, max_points)
@@ -111,6 +121,7 @@ class Plugin:
         return {"accepted": True}
 
     async def _unload(self):
+        self._stopping = True
         task = getattr(self, "_task", None)
         if task:
             task.cancel()
@@ -118,6 +129,9 @@ class Plugin:
                 await task
             except asyncio.CancelledError:
                 pass
+        power_info = getattr(self, "_power_info", None)
+        if power_info:
+            await power_info.close()
         recorder = getattr(self, "_recorder", None)
         if recorder:
             recorder.close()

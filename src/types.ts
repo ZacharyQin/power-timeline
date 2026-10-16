@@ -105,3 +105,41 @@ export interface Detail {
 export type Metric = "system" | "process" | "cpu" | "gpu";
 export type Sort = "recent" | "energy" | "power";
 export type Range = "30m" | "6h" | "today";
+
+export interface ChargeEstimate {
+  status: "available" | "unknown" | "full" | "not_charging" | "discharging" | "stale";
+  seconds: number | null;
+  updated_at: number | null;
+  source: "upower";
+  error: string | null;
+}
+
+export interface PowerInfo {
+  timestamp: number;
+  battery: {
+    model: string | null;
+    manufacturer: string | null;
+    technology: string | null;
+    supply: string;
+    state: string;
+    percent: number | null;
+    voltage_v: number | null;
+    current_a: number | null;
+    net_w: number | null;
+    system_w: number | null;
+    charge_now_mah: number | null;
+    charge_full_mah: number | null;
+    charge_design_mah: number | null;
+    energy_now_wh: number | null;
+    energy_full_wh: number | null;
+    energy_design_wh: number | null;
+    energy_basis: "reported" | "design_voltage" | "mixed" | null;
+    capacity_ratio_percent: number | null;
+    system_capacity_percent: number | null;
+    cycle_count: number | null;
+  };
+  adapter: { voltage_v: number | null; current_a: number | null; limit_w: number | null };
+  last_charge: { ended_at: number | null; elapsed_seconds: number | null; uncertainty_seconds: number | null; reason: string | null };
+  estimate: ChargeEstimate;
+  errors: Record<string, string>;
+}

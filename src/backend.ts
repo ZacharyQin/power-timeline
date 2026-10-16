@@ -1,7 +1,8 @@
 import { callable } from "@decky/api";
-import type { Detail, History, Metric, Snapshot, Sort, Timeline } from "./types";
+import type { Detail, History, Metric, PowerInfo, Snapshot, Sort, Timeline } from "./types";
 
 export const getSnapshot = callable<[], Snapshot>("get_snapshot");
+export const getPowerInfo = callable<[], PowerInfo>("get_power_info");
 export const getTimeline = callable<[start: number, end: number, max_points?: number], Timeline>("get_timeline");
 export const getGameHistory = callable<[
   game_id?: string | null,

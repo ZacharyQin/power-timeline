@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Metric, Range, Sort, TimelineEvent } from "./types";
 
-export type Page = "timeline" | "games" | "sessions" | "detail" | "help";
+export type Page = "timeline" | "power" | "games" | "sessions" | "detail" | "help";
 interface ViewState {
   page: Page;
   range: Range;
@@ -35,7 +35,7 @@ let state: ViewState = {
   cursor: null, detailCursors: {}, hardware: false, metric: "system", sort: "recent",
   gameId: null, gameName: "", sessionId: null, detailOrigin: "timeline", helpOrigin: "timeline",
   event: null, focus: "range", gamesOffset: 0, sessionsOffset: 0,
-  focusByPage: { timeline: "range", games: "history", sessions: "history", detail: "back", help: "back" },
+  focusByPage: { timeline: "range", power: "back", games: "history", sessions: "history", detail: "back", help: "back" },
 };
 const listeners = new Set<() => void>();
 export function updateView(change: Partial<ViewState>) {
@@ -65,5 +65,7 @@ export function backPage() {
     updateView({ page: "games", focus: `game:${current.gameId}` });
   } else if (current.page === "games") {
     updateView({ page: "timeline", focus: "games" });
+  } else if (current.page === "power") {
+    updateView({ page: "timeline", focus: "power" });
   }
 }

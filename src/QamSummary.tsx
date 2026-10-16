@@ -1,10 +1,11 @@
 import { useQuickAccessVisible } from "@decky/api";
 import { Navigation, PanelSection, PanelSectionRow } from "@decky/ui";
 import { FaBatteryHalf, FaBolt, FaChartLine, FaClock, FaExclamationCircle, FaGamepad } from "react-icons/fa";
-import { getTimeline } from "./backend";
+import { getPowerInfo, getTimeline } from "./backend";
 import { Action, QueryStatus, Reading, SemanticStyles, SemanticText, SemanticValue, batteryStateText, reasonText, sessionLabels, supplyText, timeText } from "./components";
 import { useDocumentVisible, useQuery, useSnapshot } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
+import { chargeEstimateText } from "./powerStatus";
 import { updateView } from "./viewState";
 
 export function QamSummary() {
@@ -17,6 +18,8 @@ export function QamSummary() {
     return getTimeline(end - 1800, end, 120);
   }, enabled);
   const sample = summary.snapshot?.sample;
+  const showCharge = sample?.supply === "external" && (sample.battery_state === "Charging" || sample.battery_state === "Full" || sample.battery_state === "Not charging");
+  const charge = useQuery(`qam-power-info:${sample?.supply}:${sample?.battery_state}`, getPowerInfo, enabled && showCharge, 15000);
   return <PanelSection title="电池时间线">
     <SemanticStyles />
     <QueryStatus padding="standard" loading={summary.loading && !summary.snapshot} error={summary.error} retry={summary.refresh} />
@@ -24,11 +27,18 @@ export function QamSummary() {
       {sample && <><strong style={{ fontSize: "1.5em" }}><SemanticValue value={sample.battery_percent} unit="%" role="battery" digits={0} /></strong> · {supplyText(sample.supply)}</>}
     </Reading>
     <Reading padding="standard" icon={FaBolt} label="当前整机功率" description={sample?.system_w === null ? sample.errors.system_w ? reasonText(sample.errors.system_w) : "当前样本无有效整机读数，不以电池净功率代替。" : undefined}><SemanticValue value={sample?.system_w ?? null} unit="W" /></Reading>
+    {showCharge && sample && <Reading padding="standard" icon={FaClock} label="预计充满" description={sample.battery_state === "Charging" ? "UPower 系统估计，会随充电速率更新，不是精确倒计时。" : undefined}>{chargeEstimateText(charge.data, sample.battery_state, sample.supply, sample.timestamp)}</Reading>}
+    {showCharge && <QueryStatus padding="standard" loading={false} error={charge.error} retry={charge.refresh} />}
     <Action icon={FaChartLine} preferred onClick={() => {
       updateView({ page: "timeline" });
       Navigation.Navigate("/power-timeline");
       Navigation.CloseSideMenus();
     }}>查看电池时间线</Action>
+    <Action icon={FaBatteryHalf} onClick={() => {
+      updateView({ page: "power", focus: "back" });
+      Navigation.Navigate("/power-timeline");
+      Navigation.CloseSideMenus();
+    }}>电源与电池详情</Action>
     {short.data && <><Reading padding="standard" icon={FaClock} label="最近 30 分钟" /><PanelSectionRow><TimeSeriesChart timeline={short.data} compact /></PanelSectionRow></>}
     <QueryStatus padding="standard" loading={short.loading} error={short.error} retry={short.refresh} />
     {summary.snapshot?.status !== "recording" && summary.snapshot && <Reading padding="standard" icon={FaExclamationCircle} label={summary.snapshot.status === "error" ? <SemanticText role="error">后台未正常记录</SemanticText> : "后台未正常记录"} description={summary.snapshot.error ?? "记录已停止"} />}
