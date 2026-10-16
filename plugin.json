@@ -1,0 +1,10 @@
+{
+  "name": "Power Timeline",
+  "author": "Zachary",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["utility"],
+    "description": "电池时间线、整机功率曲线与游戏 CPU/GPU 活动加权能量估算。"
+  }
+}
