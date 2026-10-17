@@ -34,8 +34,19 @@ const reasonDetails: Record<string, { group: ReasonGroup; text: string }> = {
   excludes_screen_soc_and_shared_system: { group: "model", text: "进程估算不包含屏幕、SoC 和系统共享开销" },
   concurrent_cpu_activity_normalized: { group: "model", text: "并行 CPU 活动权重已归一化，避免重复分配" },
   concurrent_gpu_occupancy_normalized: { group: "model", text: "并行 GPU 活动权重已归一化，避免重复分配" },
+  ec_unsupported_device: { group: "coverage", text: "当前设备或固件没有经过EC共享窗口验证，未尝试读取" },
+  ec_permission_required: { group: "coverage", text: "后端尚未取得EC输入的读取权限" },
+  ec_unavailable: { group: "coverage", text: "EC输入暂不可读取" },
+  ec_input_invalid: { group: "coverage", text: "EC尚未提供有效输入电压／电流" },
+  ec_changed_during_sample: { group: "coverage", text: "输入在本批读取中更新，未组合不同时刻的分项" },
+  ec_torn_read: { group: "coverage", text: "EC字段读取时发生更新，本批未采用" },
+  ec_firmware_mismatch: { group: "coverage", text: "EC固件镜像不匹配，未采用输入读数" },
+  battery_direction_unknown: { group: "coverage", text: "无法确认电池净功率方向" },
+  battery_window_changed: { group: "coverage", text: "电池与EC报告在读取窗口内不一致，外围暂不可分解" },
+  negative_power_difference: { group: "coverage", text: "差额为负，可能存在窗口或域差异，未裁零或补造负载" },
+  flow_components_unavailable: { group: "coverage", text: "分项尚未齐全，外围暂不可分解" },
 };
-const fieldLabels: Record<string, string> = { system_w: "整机功率", battery_w: "电池净功率", battery_percent: "电量", supply: "供电", apu_w: "APU", cpu_w: "CPU", soc_w: "SoC", gpu_w: "GPU" };
+const fieldLabels: Record<string, string> = { system_w: "整机功率", battery_w: "电池净功率", battery_percent: "电量", supply: "供电", apu_w: "APU", cpu_w: "CPU", soc_w: "SoC", gpu_w: "GPU", input_w: "输入功率", peripheral_w: "外围差额", battery_net_w: "电池净功率" };
 export const reasonText = (code: string) => reasonDetails[code]?.text ?? code;
 export function IconLabel({ icon: Icon, children }: { icon: IconType; children: ReactNode }) {
   return <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}><Icon aria-hidden="true" focusable="false" style={{ flexShrink: 0 }} /><span>{children}</span></span>;

@@ -1,3 +1,26 @@
+export interface RailReading { w: number | null; voltage_v: number | null; current_a: number | null }
+export interface PowerFlowReading {
+  timestamp: number;
+  mode: "battery" | "external" | "unknown";
+  battery_state: string;
+  input_w: number | null;
+  input_v: number | null;
+  input_a: number | null;
+  battery_net_w: number | null;
+  battery_v: number | null;
+  battery_a: number | null;
+  apu_w: number | null;
+  apu_source: "gpu_metrics" | "hwmon" | null;
+  peripheral_w: number | null;
+  difference_w: number | null;
+  pd_voltage_v: number | null;
+  pd_current_a: number | null;
+  rails: Record<"cpu" | "soc" | "gpu", RailReading>;
+  cores_w: (number | null)[];
+  read_span_ms: number;
+  errors: Record<string, string>;
+}
+
 export interface Sample {
   timestamp: number;
   battery_percent: number | null;
@@ -46,6 +69,7 @@ export interface Snapshot {
   status: "recording" | "error" | "stopped";
   error: string | null;
   sample: Sample | null;
+  power_flow: PowerFlowReading | null;
   sessions: Session[];
   model: string;
   storage_bytes: number;

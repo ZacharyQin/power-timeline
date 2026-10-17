@@ -15,6 +15,19 @@ def decode_gpu_metrics(data: bytes) -> dict:
     return {name: None if value == 0xFFFF else value / 1000
             for name, value in zip(("apu_w", "cpu_w", "soc_w", "gpu_w"), values)}
 
+def _gpu_details(data, powers):
+    # The caller has already validated the v2.4 ABI with decode_gpu_metrics.
+    rails = struct.unpack_from("<6H", data, 152)
+    def value(raw):
+        return None if raw == 0xFFFF else raw / 1000
+    return {
+        "rails": {name: {"w": powers[name + "_w"], "voltage_v": value(rails[i]),
+                         "current_a": value(rails[i + 3])}
+                  for i, name in enumerate(("cpu", "soc", "gpu"))},
+        "cores_w": [value(raw) for raw in struct.unpack_from("<4H", data, 48)],
+    }
+
+
 
 class Telemetry:
     def __init__(self, sys_root: Path = Path("/sys")):
@@ -110,11 +123,19 @@ class Telemetry:
         return result
 
     def read(self) -> dict:
-        result = self.read_battery()
+        result = self.read_battery(include_details=True)
         errors = result["errors"]
+        result["apu_source"] = None
+        result["cores_w"] = [None] * 4
+        result["rails"] = {name: {"w": None, "voltage_v": None, "current_a": None}
+                           for name in ("cpu", "soc", "gpu")}
         if self.gpu_metrics:
             try:
-                result.update(decode_gpu_metrics(self.gpu_metrics.read_bytes()))
+                raw = self.gpu_metrics.read_bytes()
+                result.update(decode_gpu_metrics(raw))
+                result.update(_gpu_details(raw, result))
+                if result["apu_w"] is not None:
+                    result["apu_source"] = "gpu_metrics"
             except (OSError, ValueError) as exc:
                 for name in ("apu_w", "cpu_w", "soc_w", "gpu_w"):
                     errors[name] = str(exc)
@@ -127,6 +148,7 @@ class Telemetry:
                 if power < 0:
                     raise ValueError("invalid APU power")
                 result["apu_w"] = power / 1e6
+                result["apu_source"] = "hwmon"
                 errors.pop("apu_w", None)
             except (OSError, ValueError) as exc:
                 errors["apu_w"] = str(exc)

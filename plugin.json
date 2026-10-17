@@ -1,7 +1,7 @@
 {
   "name": "Power Timeline",
   "author": "Zachary",
-  "flags": [],
+  "flags": ["root"],
   "api_version": 1,
   "publish": {
     "tags": ["utility"],

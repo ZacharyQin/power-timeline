@@ -16,6 +16,7 @@ from py_modules.games import GameTracker
 from py_modules.recorder import Recorder, discontinuity
 from py_modules.telemetry import Telemetry
 from py_modules.power_info import PowerInfo
+from py_modules.power_flow import PowerFlow
 
 
 class Plugin:
@@ -27,6 +28,8 @@ class Plugin:
         self._recorder = None
         self._tracker = None
         self._power_info = None
+        self._power_flow = None
+        self._flow_snapshot = None
         try:
             runtime = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR")
             if not runtime:
@@ -37,6 +40,7 @@ class Plugin:
             self._tracker = GameTracker()
             self._telemetry = Telemetry()
             self._power_info = PowerInfo(self._telemetry)
+            self._power_flow = PowerFlow(self._telemetry)
             self._attribution = Attribution()
             self._task = asyncio.create_task(self._record_loop())
             decky.logger.info("Power Timeline recorder started")
@@ -51,15 +55,16 @@ class Plugin:
         try:
             while not self._stopping:
                 began = time.monotonic()
-                sample = self._telemetry.read()
+                sample, flow = self._power_flow.read()
                 games = self._tracker.scan()
                 estimates = {}
                 if previous is not None and discontinuity(previous, sample) is None:
                     estimates = self._attribution.between(previous, sample, previous_games, games)
                 self._recorder.ingest(sample, games, estimates)
+                self._flow_snapshot = flow
                 previous, previous_games = sample, games
                 try:
-                    await decky.emit("snapshot_changed", self._recorder.snapshot())
+                    await decky.emit("snapshot_changed", await self.get_snapshot())
                 except Exception:
                     # A disconnected frontend must not cancel the persistent sampler.
                     decky.logger.warning("Power Timeline frontend event unavailable")
@@ -88,6 +93,7 @@ class Plugin:
     async def get_snapshot(self):
         recorder = await self._require_recorder()
         result = recorder.snapshot()
+        result["power_flow"] = self._flow_snapshot
         if self._failure:
             result["status"] = "error"
             result["error"] = self._failure
@@ -129,6 +135,9 @@ class Plugin:
                 await task
             except asyncio.CancelledError:
                 pass
+        power_flow = getattr(self, "_power_flow", None)
+        if power_flow:
+            power_flow.close()
         power_info = getattr(self, "_power_info", None)
         if power_info:
             await power_info.close()

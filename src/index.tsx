@@ -1,6 +1,6 @@
 import { addEventListener, definePlugin, removeEventListener, routerHook } from "@decky/api";
 import { DialogBody, DialogButtonSecondary, DialogHeader, findModuleExport, Focusable, NavEntryPositionPreferences, Navigation, ScrollPanel, staticClasses } from "@decky/ui";
-import { FaBatteryHalf, FaChartLine, FaChevronLeft, FaGamepad, FaHistory, FaInfoCircle, FaListUl } from "react-icons/fa";
+import { FaBatteryHalf, FaChartLine, FaChevronLeft, FaGamepad, FaHistory, FaInfoCircle, FaListUl, FaProjectDiagram } from "react-icons/fa";
 import { BatteryTimeline } from "./BatteryTimeline";
 import { IconLabel, SemanticStyles, SemanticText, valueText } from "./components";
 import { receiveSnapshot, useDocumentVisible, useSnapshot } from "./data";
@@ -9,6 +9,7 @@ import { ExplanationPage } from "./ExplanationPage";
 import { FullPageStyles, PageQueryStatus } from "./FullPage";
 import { QamSummary } from "./QamSummary";
 import { PowerInfoPage } from "./PowerInfoPage";
+import { PowerFlowPage } from "./PowerFlowPage";
 import { SessionDetail } from "./SessionDetail";
 import type { Snapshot } from "./types";
 import { backPage, openHelp, updateView, useView } from "./viewState";
@@ -20,7 +21,7 @@ const useNativeComposition = findModuleExport((value) => {
   return source.includes(".AddMinimumCompositionStateRequest(") && source.includes(".RemoveMinimumCompositionStateRequest(") && source.includes(".useEffect(");
 }) as (mode: number, source: string) => unknown;
 const OPAQUE_COMPOSITION = 3;
-const pageLabels: Record<Page, string> = { timeline: "电池时间线", power: "电源与电池", games: "游戏历史", sessions: "历次会话", detail: "会话详情", help: "统计说明" };
+const pageLabels: Record<Page, string> = { timeline: "电池时间线", power: "电源与电池", flow: "功率流", games: "游戏历史", sessions: "历次会话", detail: "会话详情", help: "统计说明" };
 
 function PowerTimelinePage() {
   useNativeComposition(OPAQUE_COMPOSITION, "Power Timeline");
@@ -31,8 +32,8 @@ function PowerTimelinePage() {
     if (view.page === "timeline") Navigation.NavigateBack();
     else backPage();
   };
-  const backLabel = view.page === "help" ? pageLabels[view.helpOrigin] : view.page === "detail" ? (view.detailOrigin === "timeline" ? "电池时间线" : "历次会话") : view.page === "sessions" ? "游戏分组" : view.page === "games" || view.page === "power" ? "电池时间线" : "Steam";
-  const pageIcon = view.page === "timeline" ? FaChartLine : view.page === "power" ? FaBatteryHalf : view.page === "games" ? FaGamepad : view.page === "sessions" ? FaHistory : view.page === "help" ? FaInfoCircle : FaListUl;
+  const backLabel = view.page === "help" ? pageLabels[view.helpOrigin] : view.page === "detail" ? (view.detailOrigin === "timeline" ? "电池时间线" : "历次会话") : view.page === "sessions" ? "游戏分组" : view.page === "games" || view.page === "power" || view.page === "flow" ? "电池时间线" : "Steam";
+  const pageIcon = view.page === "timeline" ? FaChartLine : view.page === "power" ? FaBatteryHalf : view.page === "flow" ? FaProjectDiagram : view.page === "games" ? FaGamepad : view.page === "sessions" ? FaHistory : view.page === "help" ? FaInfoCircle : FaListUl;
   return <DialogBody className={`pt-fullpage${view.page === "power" ? " pt-power-page" : ""}`} style={{ height: "100%", boxSizing: "border-box", padding: "52px 0" }}>
     <SemanticStyles /><FullPageStyles />
     <Focusable key={view.page} autoFocus flow-children="column" style={{ height: "100%", overflowY: "auto" }} navEntryPreferPosition={NavEntryPositionPreferences.PREFERRED_CHILD} onCancel={(event) => {
@@ -47,6 +48,7 @@ function PowerTimelinePage() {
             <Focusable className="pt-header-actions" flow-children="row">
               {view.page === "timeline" && <Focusable preferredFocus={view.focus === "games"}><DialogButtonSecondary className="pt-compact-button" onClick={() => updateView({ page: "games", live: false, focus: view.gameId ? `game:${view.gameId}` : "history" })}><IconLabel icon={FaGamepad}>游戏记录</IconLabel></DialogButtonSecondary></Focusable>}
               {view.page === "timeline" && <Focusable preferredFocus={view.focus === "power"}><DialogButtonSecondary className="pt-compact-button" onClick={() => updateView({ page: "power", focus: "back" })}><IconLabel icon={FaBatteryHalf}>电源与电池</IconLabel></DialogButtonSecondary></Focusable>}
+              {view.page === "timeline" && <Focusable preferredFocus={view.focus === "flow"}><DialogButtonSecondary className="pt-compact-button" onClick={() => updateView({ page: "flow", focus: "back" })}><IconLabel icon={FaProjectDiagram}>功率流</IconLabel></DialogButtonSecondary></Focusable>}
               <Focusable preferredFocus={view.focus === "back"}><DialogButtonSecondary className="pt-compact-button" onClick={back}><IconLabel icon={FaChevronLeft}>返回{backLabel}</IconLabel></DialogButtonSecondary></Focusable>
             </Focusable>
           </Focusable>
@@ -55,6 +57,7 @@ function PowerTimelinePage() {
           {summary.snapshot?.sample && Date.now() / 1000 - summary.snapshot.sample.timestamp > 10 && <p className="pt-muted"><SemanticText role="warning">当前采样已过期；历史读数不代表当前状态。</SemanticText></p>}
           {view.page === "timeline" && <BatteryTimeline visible={visible} />}
           {view.page === "power" && <PowerInfoPage visible={visible} />}
+          {view.page === "flow" && <PowerFlowPage flow={summary.snapshot?.power_flow ?? null} visible={visible} />}
           {(view.page === "games" || view.page === "sessions") && <GameHistory visible={visible} />}
           {view.page === "detail" && <SessionDetail visible={visible} />}
           {view.page === "help" && <ExplanationPage />}
