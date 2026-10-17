@@ -33,7 +33,7 @@ function PowerTimelinePage() {
   };
   const backLabel = view.page === "help" ? pageLabels[view.helpOrigin] : view.page === "detail" ? (view.detailOrigin === "timeline" ? "电池时间线" : "历次会话") : view.page === "sessions" ? "游戏分组" : view.page === "games" || view.page === "power" ? "电池时间线" : "Steam";
   const pageIcon = view.page === "timeline" ? FaChartLine : view.page === "power" ? FaBatteryHalf : view.page === "games" ? FaGamepad : view.page === "sessions" ? FaHistory : view.page === "help" ? FaInfoCircle : FaListUl;
-  return <DialogBody className="pt-fullpage" style={{ height: "100%", boxSizing: "border-box", padding: "52px 0" }}>
+  return <DialogBody className={`pt-fullpage${view.page === "power" ? " pt-power-page" : ""}`} style={{ height: "100%", boxSizing: "border-box", padding: "52px 0" }}>
     <SemanticStyles /><FullPageStyles />
     <Focusable key={view.page} autoFocus flow-children="column" style={{ height: "100%", overflowY: "auto" }} navEntryPreferPosition={NavEntryPositionPreferences.PREFERRED_CHILD} onCancel={(event) => {
       event.preventDefault();
