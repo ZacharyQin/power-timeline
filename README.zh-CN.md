@@ -12,7 +12,7 @@
   <img src="./docs/qam-home.jpg" alt="QAM 里的 Power Timeline：电量、功率流小图、最近 24 小时和电池信息" width="100%">
 </p>
 
-## 能做什么 {#what}
+<h2 id="what">能做什么</h2>
 
 Decky 插件。后台记下电量、整机用电，以及每个游戏的用电。关掉页面，记录不停。
 
@@ -26,13 +26,13 @@ QAM 里可以：
 
 时间线看最近 1、3、7 天。左右或横滑，停在某一刻。
 
-## 安装 {#install}
+<h2 id="install">安装</h2>
 
-先装 Decky，再安装 [dist/power-timeline-0.2.0.zip](dist/power-timeline-0.2.0.zip)。列表里是 **Power Timeline**。
+先装 Decky。到 [Releases](https://github.com/ZacharyQin/power-timeline/releases/latest) 下载最新的 ZIP，在 Decky 里选择从 ZIP 安装。列表里是 **Power Timeline**。
 
 后端以 root 运行，用来读硬件。不改系统电源，也不动其它插件。
 
-更新再装新 ZIP。卸载不删历史，一般在 `~/homebrew/data/power-timeline/`。
+更新时到同一个 Releases 页面下载新的 ZIP，再装一次。卸载不删历史，一般在 `~/homebrew/data/power-timeline/`。
 
 <details>
 <summary>从源码构建</summary>
@@ -50,7 +50,7 @@ python3 -m unittest discover -s tests -v
 
 </details>
 
-## 怎么用 {#try-it}
+<h2 id="try-it">怎么用</h2>
 
 1. 打开 Decky → **Power Timeline**。先看电量和功率小图。
 2. 选中 24 小时图，按确认。上面换最近 1、3、7 天。
@@ -60,7 +60,7 @@ python3 -m unittest discover -s tests -v
 
 第一次没有更早的记录，也不补启用前的用电。
 
-## 语言 {#language}
+<h2 id="language">语言</h2>
 
 先跟 Steam。QAM 和内页底部有一排国旗。左右或横滑只移动高亮，按确认才切换。提示跟旗子的语言走。
 
@@ -75,7 +75,7 @@ python3 -m unittest discover -s tests -v
 
 选过会记住。这份说明也是这六种语言，用顶部链接换。
 
-## 请注意 {#limits}
+<h2 id="limits">请注意</h2>
 
 - 插电时看不出整机用了多少电，显示未知，不用充电功率代替。
 - 游戏用电是估算。两个游戏同时跑，不会各算一整份。

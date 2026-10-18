@@ -2,6 +2,8 @@ name: Build
 
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   pull_request:
 
 permissions:
@@ -34,10 +36,15 @@ jobs:
       - name: Package plugin ZIP
         run: |
           python3 - <<'PY'
-          import zipfile
+          import json, os, zipfile
           from pathlib import Path
           root = Path(".")
-          package = root / "dist/power-timeline-0.2.0.zip"
+          version = json.loads((root / "package.json").read_text())["version"]
+          ref = os.environ.get("GITHUB_REF", "")
+          if ref.startswith("refs/tags/") and ref != f"refs/tags/v{version}":
+              raise SystemExit(f"{ref} does not match package.json version v{version}")
+          package = root / "dist" / f"power-timeline-{version}.zip"
+          package.parent.mkdir(exist_ok=True)
           members = [root / name for name in (
               "plugin.json", "package.json", "main.py", "LICENSE",
               "README.md", "README.zh-CN.md", "README.pt.md", "README.es.md", "README.ja.md", "README.ko.md", "dist/index.js")]
@@ -49,6 +56,24 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: power-timeline-0.2.0
-          path: dist/power-timeline-0.2.0.zip
+          name: power-timeline
+          path: dist/power-timeline-*.zip
           if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: power-timeline
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release create "$tag" dist/*.zip --repo "$GITHUB_REPOSITORY" --title "$tag" --notes "Power Timeline ${tag#v}"

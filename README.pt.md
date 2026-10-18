@@ -12,7 +12,7 @@
   <img src="./docs/qam-home.jpg" alt="Power Timeline no menu de acesso rápido: bateria, fluxo de energia, últimas 24 horas e detalhes da bateria" width="100%">
 </p>
 
-## O que faz {#what}
+<h2 id="what">O que faz</h2>
 
 Um plugin Decky. Regista a bateria, a potência do aparelho e a energia de cada jogo. Fechar a página não para o registo.
 
@@ -26,13 +26,13 @@ No menu de acesso rápido:
 
 A linha temporal mostra o último dia, 3 dias ou 7 dias. Esquerda, direita ou um arrasto para o lado param num momento.
 
-## Instalar {#install}
+<h2 id="install">Instalar</h2>
 
-Instale o Decky e depois [dist/power-timeline-0.2.0.zip](dist/power-timeline-0.2.0.zip). O Decky mostra **Power Timeline**.
+Instale o Decky. Descarregue o ZIP mais recente em [Releases](https://github.com/ZacharyQin/power-timeline/releases/latest) e instale esse ZIP no Decky. O Decky mostra **Power Timeline**.
 
 O serviço corre como root para ler hardware. Não altera a política de energia nem os outros plugins.
 
-Para atualizar, instale um ZIP mais recente. Desinstalar não apaga o histórico. Fica normalmente em `~/homebrew/data/power-timeline/`.
+Para atualizar, descarregue o ZIP novo na mesma página de Releases e instale-o outra vez. Desinstalar não apaga o histórico. Fica normalmente em `~/homebrew/data/power-timeline/`.
 
 <details>
 <summary>Construir a partir do código</summary>
@@ -50,7 +50,7 @@ python3 -m unittest discover -s tests -v
 
 </details>
 
-## Como usar {#try-it}
+<h2 id="try-it">Como usar</h2>
 
 1. Abra Decky → **Power Timeline**. Comece pela bateria e pela imagem pequena do fluxo.
 2. Foque o gráfico de 24 horas e confirme. Em cima, mude 1, 3 ou 7 dias.
@@ -60,7 +60,7 @@ python3 -m unittest discover -s tests -v
 
 Na primeira vez não há histórico anterior, nem uso de antes de ligar o plugin.
 
-## Idioma {#language}
+<h2 id="language">Idioma</h2>
 
 Segue a Steam até escolher. As bandeiras ficam no fundo do menu e de cada página. Esquerda, direita ou um deslize só movem o destaque. Confirmar muda o idioma. A frase está no idioma da bandeira.
 
@@ -75,7 +75,7 @@ Segue a Steam até escolher. As bandeiras ficam no fundo do menu e de cada pági
 
 A escolha fica guardada. Este documento existe nas mesmas seis línguas. Use as ligações no topo.
 
-## Tenha em atenção {#limits}
+<h2 id="limits">Tenha em atenção</h2>
 
 - Ligado à corrente, o uso do aparelho fica desconhecido. A potência de carga não ocupa o lugar.
 - A energia de um jogo é uma estimativa. Dois jogos ao mesmo tempo não recebem cada um uma cópia completa.

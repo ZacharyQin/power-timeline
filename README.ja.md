@@ -12,7 +12,7 @@
   <img src="./docs/qam-home.jpg" alt="クイックアクセスメニューの Power Timeline。バッテリー、電力フロー、過去24時間、バッテリー情報" width="100%">
 </p>
 
-## できること {#what}
+<h2 id="what">できること</h2>
 
 Decky プラグインです。バッテリー、本体の電力、各ゲームの電力量を記録します。ページを閉じても記録は止まりません。
 
@@ -26,13 +26,13 @@ Decky プラグインです。バッテリー、本体の電力、各ゲーム�
 
 時間軸は過去 1、3、7 日です。左右、または横に滑らせて、ある時刻で止めます。
 
-## インストール {#install}
+<h2 id="install">インストール</h2>
 
-Decky を入れてから [dist/power-timeline-0.2.0.zip](dist/power-timeline-0.2.0.zip) をインストールします。一覧は **Power Timeline** です。
+Decky を入れます。[Releases](https://github.com/ZacharyQin/power-timeline/releases/latest) から最新の ZIP をダウンロードし、Decky でその ZIP をインストールします。一覧は **Power Timeline** です。
 
 ハードウェアを読むため、バックエンドは root で動きます。システムの電源方針やほかのプラグインは変えません。
 
-更新は新しい ZIP を入れ直します。削除しても履歴は消えません。通常は `~/homebrew/data/power-timeline/` にあります。
+更新は同じ Releases のページから新しい ZIP をダウンロードして、もう一度インストールします。削除しても履歴は消えません。通常は `~/homebrew/data/power-timeline/` にあります。
 
 <details>
 <summary>ソースからビルド</summary>
@@ -50,7 +50,7 @@ python3 -m unittest discover -s tests -v
 
 </details>
 
-## 使い方 {#try-it}
+<h2 id="try-it">使い方</h2>
 
 1. Decky → **Power Timeline** を開きます。まずバッテリーと小さな電力フローを見ます。
 2. 24 時間の図で確認を押します。上で 1、3、7 日を切り替えます。
@@ -60,7 +60,7 @@ python3 -m unittest discover -s tests -v
 
 最初は以前の記録がありません。有効にする前の使用量も補いません。
 
-## 言語 {#language}
+<h2 id="language">言語</h2>
 
 選ぶまでは Steam の言語です。メニューと各ページの一番下に国旗があります。左右または横滑りはハイライトだけを動かします。確認で切り替わります。文はその国旗の言語です。
 
@@ -75,7 +75,7 @@ python3 -m unittest discover -s tests -v
 
 選択は覚えておきます。この文書も同じ六言語です。先頭のリンクで切り替えます。
 
-## 注意 {#limits}
+<h2 id="limits">注意</h2>
 
 - 電源接続中は、本体が使った電力は不明です。充電電力では代わりません。
 - ゲームの電力量は推定です。同時に二つ動いても、それぞれが全部を受け取るわけではありません。
