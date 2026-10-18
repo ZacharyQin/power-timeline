@@ -46,7 +46,7 @@ jobs:
           package = root / "dist" / f"power-timeline-{version}.zip"
           package.parent.mkdir(exist_ok=True)
           members = [root / name for name in (
-              "plugin.json", "package.json", "main.py", "LICENSE",
+              "plugin.json", "package.json", "main.py", "LICENSE", "CHANGELOG.md",
               "README.md", "README.zh-CN.md", "README.pt.md", "README.es.md", "README.ja.md", "README.ko.md", "dist/index.js")]
           members += sorted((root / "py_modules").glob("*.py"))
           with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -67,6 +67,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: power-timeline
@@ -76,4 +77,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          gh release create "$tag" dist/*.zip --repo "$GITHUB_REPOSITORY" --title "$tag" --notes "Power Timeline ${tag#v}"
+          python3 - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          version = os.environ["GITHUB_REF"].removeprefix("refs/tags/v")
+          lines = Path("CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+          prefix = f"## {version}"
+          start = next((i for i, line in enumerate(lines) if line == prefix or line.startswith(prefix + " ")), None)
+          if start is None:
+              sys.exit(f"CHANGELOG.md has no section for {version}")
+          end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+          Path("release-notes.md").write_text("\n".join(lines[start:end]).strip() + "\n", encoding="utf-8")
+          PY
+          gh release create "$tag" dist/*.zip --repo "$GITHUB_REPOSITORY" --title "$tag" --notes-file release-notes.md
