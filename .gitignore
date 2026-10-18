@@ -1,5 +1,7 @@
 node_modules/
 dist/
+evidence/
+design/
 __pycache__/
 *.py[cod]
 *.sqlite*
