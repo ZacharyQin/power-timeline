@@ -1,6 +1,7 @@
 import { useId, type CSSProperties } from "react";
 import type { PowerFlowReading } from "./types";
 import { getPowerBand, semanticColors } from "./displaySemantics";
+import { t } from "./i18n";
 
 export const flowIsFresh = (flow: PowerFlowReading | null) => !!flow && Math.abs(Date.now() / 1000 - flow.timestamp) <= 10;
 export const flowWatts = (w: number | null, signed = false) => w === null ? "— W" : `${signed && w > 0 ? "+" : ""}${w.toFixed(2)} W`;
@@ -27,9 +28,9 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
   const external = flow?.mode === "external";
   const branches: Branch[] = [
     { kind: "apu", label: "APU", value: current?.apu_w ?? null },
-    { kind: "peripheral", label: compact ? "外围" : external ? "外围设备" : "外围功耗", value: current?.peripheral_w ?? null },
+    { kind: "peripheral", label: compact ? t("flow.peripheralShort") : external ? t("flow.peripheralDevices") : t("flow.peripheralPower"), value: current?.peripheral_w ?? null },
   ];
-  if (external) branches.push({ kind: "battery", label: current?.battery_net_w !== null && (current?.battery_net_w ?? 0) < 0 ? "电池补供" : "电池", value: current?.battery_net_w ?? null, reverse: (current?.battery_net_w ?? 0) < 0 });
+  if (external) branches.push({ kind: "battery", label: current?.battery_net_w !== null && (current?.battery_net_w ?? 0) < 0 ? t("flow.batteryAssist") : t("flow.battery"), value: current?.battery_net_w ?? null, reverse: (current?.battery_net_w ?? 0) < 0 });
   const width = compact ? 268 : 800, height = compact ? 136 : 300;
   const trunkHeight = compact ? 76 : 182, trunkY = (height - trunkHeight) / 2;
   const sourceX = compact ? 2 : 20, sourceWidth = compact ? 18 : 58;
@@ -58,16 +59,16 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
   }
   const input = current?.input_w ?? null;
   const sourceKind: Glyph = current?.mode === "external" ? "plug" : current?.mode === "battery" ? "battery" : "unknown";
-  const sourceLabel = sourceKind === "plug" ? "USB-C" : sourceKind === "battery" ? "电池" : "来源未知";
+  const sourceLabel = sourceKind === "plug" ? t("flow.sourceUsb") : sourceKind === "battery" ? t("flow.sourceBattery") : t("flow.sourceUnknown");
   const sourceValue = current?.mode === "battery" && input !== null ? -input : input;
   const batteryAssist = laidOut.some(b => b.reverse);
-  let caption = compact ? "" : "外围为差额估算，含通路损耗与窗口差";
-  if (!flow) caption = "等待真实采样";
-  else if (!fresh) caption = "读数已过期，当前分流未知";
-  else if (!compact && flow.mode === "unknown") caption = "供电状态未知，流带仅示意";
-  else if (!compact && external && current?.input_w === null) caption = "USB-C输入不可读，流带仅示意，外围暂不可分解";
-  else if (!compact && current && current.peripheral_w === null) caption = current.difference_w !== null && current.difference_w < 0 ? "分项差额为负，流带仅示意，外围暂不可分解" : "分项未齐，流带仅示意，外围暂不可分解";
-  else if (!compact && batteryAssist) caption = "电池补充供电，流带仅示意；外围为差额估算";
+  let caption = compact ? "" : t("flow.captionNormal");
+  if (!flow) caption = t("flow.captionWait");
+  else if (!fresh) caption = t("flow.captionStale");
+  else if (!compact && flow.mode === "unknown") caption = t("flow.captionUnknown");
+  else if (!compact && external && current?.input_w === null) caption = t("flow.captionNoInput");
+  else if (!compact && current && current.peripheral_w === null) caption = current.difference_w !== null && current.difference_w < 0 ? t("flow.captionNegative") : t("flow.captionIncomplete");
+  else if (!compact && batteryAssist) caption = t("flow.captionAssist");
   return <figure className={`pt-flow-chart${compact ? " pt-flow-mini" : ""}`} style={{ margin: 0 }}>
     <style>{`
       .pt-flow-chart { width: 100%; min-width: 0; box-sizing: border-box; flex-shrink: 0; --pt-flow-surface: color-mix(in srgb, currentColor 6%, transparent); --pt-flow-muted: color-mix(in srgb, currentColor 72%, transparent); }
@@ -78,7 +79,7 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
       .pt-flow-sweep { pointer-events: none; animation: pt-flow-sweep-right 4.8s linear infinite; }
       @keyframes pt-flow-sweep-right { from { transform: translateX(-160px); } to { transform: translateX(var(--pt-flow-end)); } }
     `}</style>
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${sourceLabel}${batteryAssist ? "与电池经Steam Deck向APU及外围供电" : `经Steam Deck向APU、外围${external ? "及电池" : ""}分流`}，${caption}`} style={{ "--pt-flow-end": `${width + 160}px` } as CSSProperties}>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={batteryAssist ? t("flow.ariaAssist", { source: sourceLabel, caption }) : t("flow.ariaSplit", { source: sourceLabel, battery: external ? t("flow.ariaBattery") : "", caption })} style={{ "--pt-flow-end": `${width + 160}px` } as CSSProperties}>
       <defs>
         <linearGradient id={`${id}-input`}><stop stopColor={sourceKind === "plug" ? semanticColors.warning : sourceKind === "battery" ? semanticColors.battery : "currentColor"} stopOpacity=".30" /><stop offset="1" stopColor={semanticColors.system} stopOpacity=".14" /></linearGradient>
         <linearGradient id={`${id}-apu`}><stop stopColor={semanticColors.system} stopOpacity=".14" /><stop offset="1" stopColor={semanticColors.cpu} stopOpacity=".22" /></linearGradient>
@@ -116,7 +117,7 @@ export function CorePowerChart({ values }: { values: (number | null)[] }) {
   const finite = values.filter((v): v is number => v !== null && Number.isFinite(v) && v >= 0);
   const maximum = Math.max(1, Math.ceil(Math.max(0, ...finite) * 2) / 2);
   const baseline = 144, plotHeight = 102;
-  return <svg viewBox="0 0 740 180" role="img" aria-label="每核平均功率，所有核共用瓦数刻度，不代表利用率" style={{ display: "block", width: "100%", fontVariantNumeric: "tabular-nums", overflow: "visible" }}>
+  return <svg viewBox="0 0 740 180" role="img" aria-label={t("flow.coresAria")} style={{ display: "block", width: "100%", fontVariantNumeric: "tabular-nums", overflow: "visible" }}>
     <g fill="none" stroke="currentColor"><path d="M80 42H730M80 93H730" strokeOpacity=".12" strokeDasharray="3 6" /><path d="M80 144H730" strokeOpacity=".3" /></g>
     <g textAnchor="end" fontSize="12" fill="currentColor" opacity=".72"><text x="66" y="46">{maximum.toFixed(1)} W</text><text x="66" y="97">{(maximum / 2).toFixed(1)}</text><text x="66" y="148">0</text></g>
     {[0, 1, 2, 3].map(index => {
@@ -125,7 +126,7 @@ export function CorePowerChart({ values }: { values: (number | null)[] }) {
       return <g key={index} textAnchor="middle">
         {value !== null && <rect x={x - 19} y={baseline - h} width="38" height={h} rx="6" fill={flowColor(value)} fillOpacity=".75" />}
         <text x={x} y={baseline - h - 10} fontSize="17" fontWeight="600" fill={flowColor(value)}>{value === null ? "— W" : `${value.toFixed(3)} W`}</text>
-        <text x={x} y="170" fontSize="13" fill="currentColor" opacity=".72">核{index}</text>
+        <text x={x} y="170" fontSize="13" fill="currentColor" opacity=".72">{t("flow.core", { index })}</text>
       </g>;
     })}
   </svg>;

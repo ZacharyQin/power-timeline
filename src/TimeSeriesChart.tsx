@@ -2,6 +2,8 @@ import { DialogButtonSecondary, Focusable, GamepadButton } from "@decky/ui";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FaClock, FaInfoCircle } from "react-icons/fa";
 import { IconLabel, PowerScaleLegend, Reading, Restrictions, SemanticText, SemanticValue, batteryStateText, durationText, reasonText, supplyText, timeText } from "./components";
+import { t, useLocale } from "./i18n";
+import type { MessageKey } from "./locales/en";
 import { PageReading } from "./FullPage";
 import { GameIcon } from "./GameIcon";
 import { GameLegend } from "./GameLegend";
@@ -10,6 +12,8 @@ import type { SeriesKey } from "./displaySemantics";
 import { getGameIntervals, isSleepEvent, timelineEventLabel } from "./timelineEvents";
 import type { SleepEvent } from "./timelineEvents";
 import type { GameTimelineEvent, Sample, Timeline } from "./types";
+
+const seriesMessage = { battery_percent: "series.battery_percent", system_w: "series.system_w", apu_w: "series.apu_w", cpu_w: "series.cpu_w", soc_w: "series.soc_w", gpu_w: "series.gpu_w" } as const satisfies Record<SeriesKey, MessageKey>;
 
 function padTime(value: number) {
   return String(value).padStart(2, "0");
@@ -74,16 +78,17 @@ function smoothLine(points: { x: number; y: number }[]): string {
 
 function SeriesLabel({ seriesKey }: { seriesKey: SeriesKey }) {
   const item = chartSeries[seriesKey];
-  return <SemanticText role={item.role}><svg aria-hidden="true" width="24" height="10" viewBox="0 0 24 10" style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }}><line x1="0" y1="5" x2="24" y2="5" stroke="currentColor" strokeWidth="2" strokeDasharray={item.dash} /></svg>{seriesKey === "system_w" ? "整机功率" : item.label}</SemanticText>;
+  const name = seriesKey === "system_w" ? t("series.systemPower") : t(seriesMessage[seriesKey]);
+  return <SemanticText role={item.role}><svg aria-hidden="true" width="24" height="10" viewBox="0 0 24 10" style={{ display: "inline-block", verticalAlign: "middle", marginRight: 6 }}><line x1="0" y1="5" x2="24" y2="5" stroke="currentColor" strokeWidth="2" strokeDasharray={item.dash} /></svg>{name}</SemanticText>;
 }
 
 function unavailableSystemReason(sample: Sample): string {
   const error = sample.errors.system_w;
-  if (error && error !== "not_confirmed_battery_discharge") return `整机功率读取失败：${reasonText(error)}`;
-  if (sample.supply === "external") return "外接供电，无法用电池读数计算整机功率。";
-  if (sample.supply !== "battery") return "供电状态未确认，暂不能计算整机功率。";
-  if (sample.battery_state.toLowerCase() !== "discharging") return "电池未处于确认放电状态，暂不能计算整机功率。";
-  return "缺少可用的电池功率读数，暂不能计算整机功率。";
+  if (error && error !== "not_confirmed_battery_discharge") return t("chart.systemFail", { reason: reasonText(error) });
+  if (sample.supply === "external") return t("chart.external");
+  if (sample.supply !== "battery") return t("chart.supplyUnconfirmed");
+  if (sample.battery_state.toLowerCase() !== "discharging") return t("chart.notDischarging");
+  return t("chart.noBatteryPower");
 }
 
 function ChartGuide({ hardware, games, sleep, gaps }: { hardware: boolean; games: boolean; sleep: boolean; gaps: boolean }) {
@@ -91,16 +96,16 @@ function ChartGuide({ hardware, games, sleep, gaps }: { hardware: boolean; games
   const bodyId = useId();
   return <Focusable className="pt-chart-guide" flow-children="column">
     <DialogButtonSecondary className="pt-compact-button" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded(!expanded)}>
-      <IconLabel icon={FaInfoCircle}>{expanded ? "收起颜色与读图说明" : "颜色与读图说明"}</IconLabel>
+      <IconLabel icon={FaInfoCircle}>{expanded ? t("chart.guideHide") : t("chart.guideShow")}</IconLabel>
     </DialogButtonSecondary>
     {expanded && <div id={bodyId} className="pt-chart-guide-body">
       <PowerScaleLegend />
-      <p>线样与名称识别曲线；W数字颜色仅表示绝对功率大小，不随图表峰值变化。</p>
-      {hardware && <p>硬件域为独立遥测，APU与CPU／SoC／GPU不相加，也不代替整机功率。</p>}
-      {games && <p>游戏底色只标记进程观测区间，不代表前台独占或游戏整机耗电；颜色配合图标和名称识别。</p>}
-      {sleep && <p>休眠底色与虚线仅连接真实端点，不生成期间样本、读数或能量。</p>}
-      {gaps && <p>其他记录缺口保持断线，不补采样或能量。</p>}
-      <p>曲线间的圆点标记事件；左右或触摸只选择真实样本。</p>
+      <p>{t("chart.guideLines")}</p>
+      {hardware && <p>{t("chart.guideHardware")}</p>}
+      {games && <p>{t("chart.guideGames")}</p>}
+      {sleep && <p>{t("chart.guideSleep")}</p>}
+      {gaps && <p>{t("chart.guideGaps")}</p>}
+      <p>{t("chart.guideCursor")}</p>
     </div>}
   </Focusable>;
 }
@@ -115,6 +120,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
   onOpen?: () => void;
   preferredFocus?: boolean;
 }) {
+  const language = useLocale();
   const series = useMemo(() => hardware ? [chartSeries.system_w, ...hardwareSeries] : [chartSeries.system_w], [hardware]);
   const { points, start, end } = timeline;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -123,7 +129,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
   const gaps = useMemo(() => timeline.events.filter((event) => event.kind === "gap" && event.timestamp < end && (event.end ?? end) > start), [timeline.events, start, end]);
   const sleeps = useMemo(() => gaps.filter(isSleepEvent), [gaps]);
   const hasSleep = sleeps.length > 0;
-  const gameIntervals = useMemo(() => showGames ? getGameIntervals(timeline) : null, [showGames, timeline.events, start, end]);
+  const gameIntervals = useMemo(() => showGames ? getGameIntervals(timeline) : null, [showGames, timeline.events, start, end, language]);
   const hasGameIntervals = Boolean(gameIntervals?.spans.length);
   const hasSystemReadings = compact || points.some((point) => point.system_w !== null);
   const batteryPoints = useMemo(() => points.filter((point) => point.battery_percent !== null), [points]);
@@ -175,23 +181,23 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
   const systemRestriction = useMemo(() => {
     if (compact || !selected || selected.system_w !== null) return null;
     if (!hasSystemReadings && points.every((point) => point.supply === "external" && (!point.errors.system_w || point.errors.system_w === "not_confirmed_battery_discharge"))) {
-      return "本段均为外接供电，无法用电池读数计算整机功率。";
+      return t("chart.externalAll");
     }
-    return `${hasSystemReadings ? "" : "本段未取得整机功率。"}所选样本：${unavailableSystemReason(selected)}`;
-  }, [compact, selected, points, hasSystemReadings]);
+    return `${hasSystemReadings ? "" : t("chart.noSystemRange")}${t("chart.selectedPrefix", { reason: unavailableSystemReason(selected) })}`;
+  }, [compact, selected, points, hasSystemReadings, language]);
   const systemReadingError = Boolean(selected?.errors.system_w && selected.errors.system_w !== "not_confirmed_battery_discharge");
   const markerTime = selected?.timestamp ?? selectedTime;
-  const sleepDescription = (event: SleepEvent) => `${timelineEventLabel(event)}：${timeText(event.timestamp, true)} — ${timeText(event.end, true)}（${durationText(event.end - event.timestamp)}）。虚线仅连接前后真实端点，不是休眠期间的实测或估算值，不补样本、不补算能量。`;
+  const sleepDescription = (event: SleepEvent) => t("chart.sleepAria", { label: timelineEventLabel(event), start: timeText(event.timestamp, true), end: timeText(event.end, true), duration: durationText(event.end - event.timestamp) });
   const gapBackgrounds = (top: number, bottom: number, labelY: number) => gaps.map((event, index) => {
     const from = Math.max(left, Math.min(right, x(event.timestamp)));
     const to = Math.max(left, Math.min(right, x(event.end ?? end)));
     if (to <= from) return null;
     const sleep = event.label === "suspend";
-    const description = isSleepEvent(event) ? sleepDescription(event) : `${timelineEventLabel(event)}：${timeText(event.timestamp, true)} — ${timeText(event.end ?? end, true)}（${durationText((event.end ?? end) - event.timestamp)}）；无采样，不连接、不补算能量。`;
+    const description = isSleepEvent(event) ? sleepDescription(event) : t("chart.gapAria", { label: timelineEventLabel(event), start: timeText(event.timestamp, true), end: timeText(event.end ?? end, true), duration: durationText((event.end ?? end) - event.timestamp) });
     return <g key={index} role="img" aria-label={description}>
       <title>{description}</title>
       <rect x={from} y={top} width={to - from} height={bottom - top} fill={sleep ? semanticColors.soc : "currentColor"} opacity={sleep ? "0.18" : "0.07"} />
-      {sleep && to - from >= 40 && <text x={(from + to) / 2} y={labelY} textAnchor="middle" fill="currentColor" fontSize="14" aria-hidden="true">休眠</text>}
+      {sleep && to - from >= 40 && <text x={(from + to) / 2} y={labelY} textAnchor="middle" fill="currentColor" fontSize="14" aria-hidden="true">{t("chart.sleep")}</text>}
     </g>;
   });
   const plot = (key: SeriesKey, top: number, bottom: number, maximum: number, smooth = false) => {
@@ -241,7 +247,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
           const beforeY = bottom - Math.min(maximum, Math.max(0, before)) / maximum * (bottom - top);
           const afterY = bottom - Math.min(maximum, Math.max(0, after)) / maximum * (bottom - top);
           return <line key={index} x1={x(from)} y1={beforeY + (afterY - beforeY) * (from - event.before.timestamp) / elapsed} x2={x(to)} y2={beforeY + (afterY - beforeY) * (to - event.before.timestamp) / elapsed} stroke="currentColor" strokeWidth="2" strokeDasharray={item.dash || "6 4"} vectorEffect="non-scaling-stroke">
-            <title>{`${item.label}：${sleepDescription(event)}`}</title>
+            <title>{t("series.sleepTitle", { series: t(seriesMessage[key]), description: sleepDescription(event) })}</title>
           </line>;
         })}
       </svg>
@@ -249,7 +255,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       {dots.map((dot, index) => <circle key={index} cx={dot.x} cy={dot.y} r="1.6" fill="currentColor" />)}
     </g>;
   };
-  if (!hasPoints && !hasSleep && !hasGameIntervals) return compact ? <Reading icon={FaClock} label="此范围尚无样本" description="初次启用只记录之后的数据；缺失区间不补算。" /> : <PageReading label="此范围尚无样本" description="初次启用只记录之后的数据；缺失区间不补算。" />;
+  if (!hasPoints && !hasSleep && !hasGameIntervals) return compact ? <Reading icon={FaClock} label={t("chart.noSamples")} description={t("chart.noSamplesDetail")} /> : <PageReading label={t("chart.noSamples")} description={t("chart.noSamplesDetail")} />;
   if (compact) {
     const scrubbed = batteryPoints.find((point) => point.timestamp === scrub) ?? null;
     const scrubX = scrubbed ? x(scrubbed.timestamp) : 0;
@@ -289,7 +295,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       labeled.push(timestamp);
       previousLabel = position;
     }
-    const chart = <svg ref={svgRef} role="img" aria-label={`最近二十四小时电池百分比；左右或触摸拖动选择样本，点按进入详情；上下切换组件；休眠虚线仅连接真实端点；其他缺口断线；不补样本、不补算能量${!hasPoints ? "；休眠期间无采样" : ""}`} viewBox={`0 0 ${plotWidth} 132`} style={{ width: "100%", height: 132, minHeight: 132, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+    const chart = <svg ref={svgRef} role="img" aria-label={`${t("chart.scrubAria")}${hasPoints ? "" : t("chart.scrubAriaSleep")}`} viewBox={`0 0 ${plotWidth} 132`} style={{ width: "100%", height: 132, minHeight: 132, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
       gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
       event.currentTarget.setPointerCapture(event.pointerId);
     }} onPointerMove={(event) => {
@@ -307,7 +313,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       gesture.current.active = false;
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     }} onClick={(event) => { if (!gesture.current.moved) return; event.preventDefault(); event.stopPropagation(); }} onPointerCancel={() => { gesture.current.active = false; }} onPointerLeave={() => { if (gesture.current.hover && !gesture.current.active) { gesture.current.hover = false; setScrub(null); } }}>
-      <title>电池百分比 · 最近二十四小时</title>
+      <title>{t("chart.scrubTitle")}</title>
       <text x="0" y="20" fill="#fff" fontSize="14">100%</text><text x="0" y="92" fill="#fff" fontSize="14">0%</text>
       {[20, 92].map((y) => <line key={y} x1={left} y1={y} x2={right} y2={y} stroke="#fff" opacity="0.15" />)}
       {gapBackgrounds(20, 92, 108)}
@@ -324,7 +330,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       </g>}
     </svg>;
     if (!onOpen) return chart;
-    return <Focusable className="pt-qam-chart" onActivate={() => { if (gesture.current.moved) { gesture.current.moved = false; return; } onOpen(); }} onOKButton={() => { gesture.current.moved = false; onOpen(); }} onOKActionDescription="查看电池时间线" onGamepadBlur={() => { window.setTimeout(() => setScrub(null), 0); }} onGamepadDirection={(event) => {
+    return <Focusable className="pt-qam-chart" onActivate={() => { if (gesture.current.moved) { gesture.current.moved = false; return; } onOpen(); }} onOKButton={() => { gesture.current.moved = false; onOpen(); }} onOKActionDescription={t("chart.openTimeline")} onGamepadBlur={() => { window.setTimeout(() => setScrub(null), 0); }} onGamepadDirection={(event) => {
       const button = event.detail.button;
       if (button !== GamepadButton.DIR_LEFT && button !== GamepadButton.DIR_RIGHT || batteryPoints.length === 0) return false;
       gesture.current.hover = false;
@@ -358,7 +364,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       .pt-timeline-chart.gpfocus, .pt-timeline-chart.gpfocuswithin, .pt-timeline-chart:focus-visible { background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); outline: none; }
     `}</style>
     {/* @ts-expect-error Steam 的空容器必须带 focusableIfEmpty，否则手柄焦点树会跳过只含 SVG 的图。 */}
-    <Focusable noFocusRing focusableIfEmpty className="pt-timeline-chart" preferredFocus={preferredFocus} onOKActionDescription="左右选择样本" onGamepadDirection={(event) => {
+    <Focusable noFocusRing focusableIfEmpty className="pt-timeline-chart" preferredFocus={preferredFocus} onOKActionDescription={t("chart.selectSamples")} onGamepadDirection={(event) => {
       const button = event.detail.button;
       if (!onCursor || (button !== GamepadButton.DIR_LEFT && button !== GamepadButton.DIR_RIGHT) || points.length === 0) return false;
       const current = cursor ?? points[points.length - 1].timestamp;
@@ -367,7 +373,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       const next = points[Math.max(0, Math.min(points.length - 1, index + (button === GamepadButton.DIR_LEFT ? -1 : 1)))];
       onCursor(next.timestamp);
       return true;
-    }}><svg ref={svgRef} role="img" aria-label={`同时间轴电池百分比和功率；左右或触摸拖动选择真实样本；电池与瓦特分别标轴；${showGames ? "游戏底色为实际观测区间；" : ""}休眠虚线仅连接真实端点，其他缺口断线；不补样本、不补算能量${!hasPoints ? "；此范围无采样" : ""}`} viewBox={`0 0 ${plotWidth} 360`} style={{ width: "100%", height: 360, minHeight: 360, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+    }}><svg ref={svgRef} role="img" aria-label={`${t("chart.fullAria")}${showGames ? t("chart.fullAriaGames") : ""}${t("chart.fullAriaRest")}${hasPoints ? "" : t("chart.fullAriaEmpty")}`} viewBox={`0 0 ${plotWidth} 360`} style={{ width: "100%", height: 360, minHeight: 360, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
       gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
       event.currentTarget.setPointerCapture(event.pointerId);
     }} onPointerMove={(event) => {
@@ -388,11 +394,11 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       gesture.current.active = false;
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     }} onClick={(event) => { if (!gesture.current.moved) return; event.preventDefault(); event.stopPropagation(); }} onPointerCancel={() => { gesture.current.active = false; }}>
-      <title>电池 % 与功率 W；共用时间轴；休眠虚线仅连接真实端点，其他缺口不连接</title>
-      <desc>休眠背景的时间和时长见区间提示；虚线仅连接前后真实端点，不是休眠期间的实测或估算值。游标只选择实际样本，其他缺口保持断线，不补样本、不补算能量。</desc>
+      <title>{t("chart.fullTitle")}</title>
+      <desc>{t("chart.fullDesc")}</desc>
       {gameIntervals?.spans.map(({ event, from, to, lane, game }) => {
         const begin = x(from), finish = x(to);
-        const description = `${game.name} · 游戏观测区间：${timeText(event.timestamp, true)} — ${timeText(event.end ?? event.last_seen, true)}`;
+        const description = t("chart.gameInterval", { name: game.name, start: timeText(event.timestamp, true), end: timeText(event.end ?? event.last_seen, true) });
         return <g key={event.session_id} className="pt-game-interval" data-game-id={game.id} role="img" aria-label={description}>
           <title>{description}</title>
           <rect x={begin} y="25" width={finish - begin} height="298" fill={game.color} opacity="0.13" />
@@ -404,8 +410,8 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
         </g>;
       })}
       <g fill="currentColor" fontSize="14">
-        <text x="0" y="18">电池 %</text><text x="14" y="39">100</text><text x="25" y="94">50</text><text x="33" y="149">0</text>
-        <text x="0" y="186">功率 W</text><text x="12" y="207">{maxW}</text><text x="12" y="262">{maxW / 2}</text><text x="33" y="317">0</text>
+        <text x="0" y="18">{t("chart.axisBattery")}</text><text x="14" y="39">100</text><text x="25" y="94">50</text><text x="33" y="149">0</text>
+        <text x="0" y="186">{t("chart.axisPower")}</text><text x="12" y="207">{maxW}</text><text x="12" y="262">{maxW / 2}</text><text x="33" y="317">0</text>
         {axisTicks(start, end, left, right, x).map((tick) => {
           const position = x(tick.timestamp);
           return <g key={tick.timestamp}>
@@ -443,32 +449,32 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
             <text x={blockX + 22} y={labelY - 16} textAnchor="start" fontSize="12" stroke="none">{gameName}</text>
           </>}
           <text x={valueX} y={labelY} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="13" fontWeight="600" stroke="none">{selected.battery_percent === null ? "—" : `${Math.round(selected.battery_percent)}%`}</text>
-          <text x={valueX} y={labelY + 16} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="12" stroke="none">{selected.system_w === null ? "整机 —" : `${selected.system_w.toFixed(2)} W`}</text>
+          <text x={valueX} y={labelY + 16} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="12" stroke="none">{selected.system_w === null ? t("chart.systemMissing") : t("chart.systemWatts", { value: selected.system_w.toFixed(2) })}</text>
           <text x={valueX} y={labelY + 32} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="11" opacity="0.82" stroke="none">{when}</text>
         </g>;
       })()}
-      {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 162 : showGames ? 193 : 175} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${event.label}`}</title></circle>)}
+      {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 162 : showGames ? 193 : 175} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${timelineEventLabel(event)}`}</title></circle>)}
     </svg></Focusable>
-    <section className="pt-chart-auxiliary" aria-label="样本读数与图例">
+    <section className="pt-chart-auxiliary" aria-label={t("chart.readout")}>
       <div className="pt-chart-readout" aria-live="polite">
         <div className="pt-chart-context">
-          <strong>{selected ? `所选样本 · ${timeText(markerTime, true)}` : "此范围无采样"}</strong>
+          <strong>{selected ? t("chart.sample", { time: timeText(markerTime, true) }) : t("chart.noSample")}</strong>
           {selected && <span className="pt-muted">{supplyText(selected.supply)} · {batteryStateText(selected.battery_state)}</span>}
         </div>
         <div className="pt-chart-values pt-chart-primary">
-          <span><SeriesLabel seriesKey="battery_percent" /> {selected ? <SemanticValue value={selected.battery_percent} unit="%" role="battery" digits={0} /> : <span className="pt-muted">无采样</span>}</span>
-          <span><SeriesLabel seriesKey="system_w" /> {selected ? <SemanticValue value={selected.system_w} unit="W" /> : <span className="pt-muted">无采样</span>}</span>
+          <span><SeriesLabel seriesKey="battery_percent" /> {selected ? <SemanticValue value={selected.battery_percent} unit="%" role="battery" digits={0} /> : <span className="pt-muted">{t("chart.noReading")}</span>}</span>
+          <span><SeriesLabel seriesKey="system_w" /> {selected ? <SemanticValue value={selected.system_w} unit="W" /> : <span className="pt-muted">{t("chart.noReading")}</span>}</span>
         </div>
         {systemRestriction && <p className="pt-chart-system-status" role="status">{systemReadingError ? <SemanticText role="error">{systemRestriction}</SemanticText> : systemRestriction}</p>}
-        {hardware && <div className="pt-chart-hardware" aria-label="硬件功耗域遥测">
-          <span className="pt-muted">硬件遥测</span>
-          <div className="pt-chart-values">{hardwareSeries.map((item) => <span key={item.key}><SeriesLabel seriesKey={item.key} /> {selected ? <SemanticValue value={selected[item.key]} unit="W" /> : <span className="pt-muted">无采样</span>}</span>)}</div>
+        {hardware && <div className="pt-chart-hardware" aria-label={t("chart.hardwareAria")}>
+          <span className="pt-muted">{t("chart.hardware")}</span>
+          <div className="pt-chart-values">{hardwareSeries.map((item) => <span key={item.key}><SeriesLabel seriesKey={item.key} /> {selected ? <SemanticValue value={selected[item.key]} unit="W" /> : <span className="pt-muted">{t("chart.noReading")}</span>}</span>)}</div>
         </div>}
       </div>
       {gameIntervals && <GameLegend games={gameIntervals.games} />}
       <ChartGuide hardware={hardware} games={hasGameIntervals} sleep={hasSleep} gaps={gaps.some((event) => !isSleepEvent(event))} />
     </section>
-    <PageReading label="电池供电有效覆盖" className="pt-inline-facts">{durationText(timeline.coverage_seconds)} / {durationText(end - start)} · 整机 <SemanticValue value={timeline.system_wh} unit="Wh" role="system" /></PageReading>
-    {selected && <Restrictions errors={selected.errors} label="所选样本状态" />}
+    <PageReading label={t("chart.coverage")} className="pt-inline-facts">{t("chart.coverageValue", { covered: durationText(timeline.coverage_seconds), span: durationText(end - start) })} <SemanticValue value={timeline.system_wh} unit="Wh" role="system" /></PageReading>
+    {selected && <Restrictions errors={selected.errors} label={t("chart.sampleStatus")} />}
   </>;
 }

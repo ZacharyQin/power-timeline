@@ -3,9 +3,11 @@ import { Focusable, Navigation, PanelSection, PanelSectionRow, Toggle } from "@d
 import { useEffect, useRef, useState } from "react";
 import { FaBatteryHalf, FaBolt, FaChartLine, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
 import { getPowerInfo, getTimeline } from "./backend";
-import { QueryStatus, Reading, SemanticStyles, SemanticText, SemanticValue, batteryStateText, sessionLabels, supplyText, valueText } from "./components";
+import { QueryStatus, Reading, SemanticStyles, SemanticText, SemanticValue, batteryStateText, sessionLabel, supplyText, valueText } from "./components";
+import { displayGameName, t, useLocale } from "./i18n";
 import { useDocumentVisible, useQuery, useSnapshot } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
+import { LocaleFlags } from "./LocaleFlags";
 import { GameIcon } from "./GameIcon";
 import { updateView } from "./viewState";
 import { PowerFlowChart } from "./PowerFlowChart";
@@ -43,16 +45,16 @@ function qamNumber(value: number | null, unit: string, digits = 1) {
 }
 
 function qamEstimate(info: PowerInfo | null, state: string, supply: string) {
-  if (state.toLowerCase() === "full") return <span className="pt-qam-eta pt-qam-eta-full">已充满</span>;
+  if (state.toLowerCase() === "full") return <span className="pt-qam-eta pt-qam-eta-full">{t("qam.full")}</span>;
   const seconds = info?.estimate.seconds;
   if (state.toLowerCase() !== "charging" || supply !== "external" || info?.estimate.status !== "available" || seconds == null || seconds <= 0) return <span className="pt-qam-eta pt-qam-eta-empty">—</span>;
   const minutes = Math.ceil(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return <span className="pt-qam-eta">
-    <span className="pt-qam-eta-approx">约</span>
-    {hours > 0 && <><span className="pt-qam-eta-num">{hours}</span><span className="pt-qam-eta-unit">小时</span></>}
-    {(hours === 0 || rest > 0) && <><span className="pt-qam-eta-num">{hours > 0 ? rest : minutes}</span><span className="pt-qam-eta-unit">分钟</span></>}
+    <span className="pt-qam-eta-approx">{t("qam.about")}</span>
+    {hours > 0 && <><span className="pt-qam-eta-num">{hours}</span><span className="pt-qam-eta-unit">{t("qam.hours")}</span></>}
+    {(hours === 0 || rest > 0) && <><span className="pt-qam-eta-num">{hours > 0 ? rest : minutes}</span><span className="pt-qam-eta-unit">{t("qam.minutes")}</span></>}
   </span>;
 }
 
@@ -99,15 +101,16 @@ function ChargeLimitToggle({ active }: { active: boolean }) {
   return <PanelSectionRow>
     <Focusable className="pt-qam-limit">
       <div className="pt-qam-limit-copy">
-        <div className="pt-qam-limit-title"><FaBolt aria-hidden="true" />充电限制</div>
-        <div className="pt-qam-limit-note">{on ? `充到 ${limit ?? "—"}% 停止` : "当前不限制，可充满"}</div>
+        <div className="pt-qam-limit-title"><FaBolt aria-hidden="true" />{t("qam.chargeLimit")}</div>
+        <div className="pt-qam-limit-note">{on ? t("qam.chargeStop", { limit: limit ?? "—" }) : t("qam.chargeUnlimited")}</div>
       </div>
-      <Toggle aria-label="充电限制" value={on} onChange={(value) => { pending.current = { value, until: Date.now() + 3000 }; setOn(value); write.current?.(value); }} />
+      <Toggle aria-label={t("qam.chargeLimit")} value={on} onChange={(value) => { pending.current = { value, until: Date.now() + 3000 }; setOn(value); write.current?.(value); }} />
     </Focusable>
   </PanelSectionRow>;
 }
 
 export function QamSummary() {
+  useLocale();
   const visible = useQuickAccessVisible();
   const documentVisible = useDocumentVisible();
   const enabled = visible && documentVisible;
@@ -163,42 +166,43 @@ export function QamSummary() {
     `}</style>
     <SemanticStyles />
     <QueryStatus padding="standard" loading={summary.loading && !summary.snapshot} error={summary.error} retry={summary.refresh} />
-    <Reading className="pt-qam-top" padding="standard" icon={FaBatteryHalf} label={sample ? "电量" : "尚未采到电池样本"} description={sample ? batteryStateText(sample.battery_state) : "启用后从当前时刻开始记录。"} onGamepadFocus={(event) => revealQamHeading(event.currentTarget)}>
+    <Reading className="pt-qam-top" padding="standard" icon={FaBatteryHalf} label={sample ? t("qam.battery") : t("qam.noBattery")} description={sample ? batteryStateText(sample.battery_state) : t("qam.recordingStarts")} onGamepadFocus={(event) => revealQamHeading(event.currentTarget)}>
       {sample && <><strong style={{ fontSize: "1.5em" }}><SemanticValue value={sample.battery_percent} unit="%" role="battery" digits={0} /></strong> · {supplyText(sample.supply)}</>}
     </Reading>
-    <PanelSectionRow><Focusable noFocusRing className="pt-qam-chart pt-qam-flow pt-qam-top" preferredFocus onGamepadFocus={(event) => revealQamHeading(event.currentTarget)} onActivate={() => openPage("flow")} onOKButton={() => openPage("flow")} onOKActionDescription="查看功率流"><PowerFlowChart flow={summary.snapshot?.power_flow ?? null} compact active={enabled} /></Focusable></PanelSectionRow>
-    {showCharge && sample && <Reading padding="standard" icon={FaHourglassHalf} label="预计充满">{qamEstimate(estimate.data ?? contract.data, sample.battery_state, sample.supply)}</Reading>}
+    <PanelSectionRow><Focusable noFocusRing className="pt-qam-chart pt-qam-flow pt-qam-top" preferredFocus onGamepadFocus={(event) => revealQamHeading(event.currentTarget)} onActivate={() => openPage("flow")} onOKButton={() => openPage("flow")} onOKActionDescription={t("qam.openFlow")}><PowerFlowChart flow={summary.snapshot?.power_flow ?? null} compact active={enabled} /></Focusable></PanelSectionRow>
+    {showCharge && sample && <Reading padding="standard" icon={FaHourglassHalf} label={t("qam.eta")}>{qamEstimate(estimate.data ?? contract.data, sample.battery_state, sample.supply)}</Reading>}
     <ChargeLimitToggle active={enabled} />
 
-    <Reading padding="standard" icon={FaChartLine} label="最近 24 小时" />
+    <Reading padding="standard" icon={FaChartLine} label={t("qam.lastDay")} />
     {day.data && <PanelSectionRow><TimeSeriesChart timeline={day.data} compact onOpen={() => openPage("timeline")} /></PanelSectionRow>}
     <QueryStatus padding="standard" loading={day.loading && !day.data} error={day.error} retry={day.refresh} />
-    {summary.snapshot?.status !== "recording" && summary.snapshot && <Reading padding="standard" icon={FaExclamationCircle} label={summary.snapshot.status === "error" ? <SemanticText role="error">后台未正常记录</SemanticText> : "后台未正常记录"} description={summary.snapshot.error ?? "记录已停止"} />}
-    {summary.snapshot?.sessions.length === 0 && <div className="pt-qam-game-empty">当前未发现游戏进程</div>}
+    {summary.snapshot?.status !== "recording" && summary.snapshot && <Reading padding="standard" icon={FaExclamationCircle} label={summary.snapshot.status === "error" ? <SemanticText role="error">{t("qam.backendDown")}</SemanticText> : t("qam.backendDown")} description={summary.snapshot.error ?? t("qam.stopped")} />}
+    {summary.snapshot?.sessions.length === 0 && <div className="pt-qam-game-empty">{t("qam.noGame")}</div>}
     {summary.snapshot && summary.snapshot.sessions.length > 0 && <div className="pt-qam-games">
       {summary.snapshot.sessions.map((session) => <div className="pt-qam-game" key={session.session_id}>
-        <div className="pt-qam-game-head"><GameIcon gameId={session.game_id} /><span className="pt-qam-game-name">{session.name}</span><span className={`pt-qam-game-status pt-qam-game-status-${session.status}`}>{sessionLabels[session.status]}</span></div>
+        <div className="pt-qam-game-head"><GameIcon gameId={session.game_id} /><span className="pt-qam-game-name">{displayGameName(session.name, session.game_id)}</span><span className={`pt-qam-game-status pt-qam-game-status-${session.status}`}>{sessionLabel(session.status)}</span></div>
       </div>)}
     </div>}
     <PanelSectionRow>
       {/* @ts-expect-error Steam 导航树要显式 focusable，Decky 的 Focusable 类型没声明这个属性。 */}
-      <Focusable className="pt-qam-spec" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "12px 16px" }} tabIndex={0} focusable aria-label="电池信息与电源参数" onClick={() => openPage("power")} onOKButton={() => openPage("power")} onOKActionDescription="查看电源与电池">
+      <Focusable className="pt-qam-spec" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "12px 16px" }} tabIndex={0} focusable aria-label={t("qam.specs")} onClick={() => openPage("power")} onOKButton={() => openPage("power")} onOKActionDescription={t("qam.openPower")}>
         <div className="pt-qam-spec-col pt-qam-spec-battery">
-          <div className="pt-qam-spec-title">电池信息</div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">剩余容量</div><div className="pt-qam-spec-value">{battery?.energy_now_wh != null ? qamNumber(battery.energy_now_wh, "Wh") : battery?.charge_now_mah != null ? qamNumber(battery.charge_now_mah, "mAh", 0) : "-"}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">当前满充能量</div><div className="pt-qam-spec-value">{battery?.energy_full_wh != null ? qamNumber(battery.energy_full_wh, "Wh") : battery?.charge_full_mah != null ? qamNumber(battery.charge_full_mah, "mAh", 0) : "-"}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">满充 / 设计</div><div className="pt-qam-spec-value">{battery ? battery.energy_full_wh !== null || battery.energy_design_wh !== null ? `${qamNumber(battery.energy_full_wh, "").trimEnd()} / ${qamNumber(battery.energy_design_wh, "Wh")}` : `${qamNumber(battery.charge_full_mah, "", 0).trimEnd()} / ${qamNumber(battery.charge_design_mah, "mAh", 0)}` : "-"}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">容量比</div><div className="pt-qam-spec-value">{battery ? qamNumber(battery.capacity_ratio_percent, "%", 1) : "-"}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">循环</div><div className="pt-qam-spec-value">{battery?.cycle_count == null ? "-" : qamNumber(battery.cycle_count, "次", 0)}</div></div>
+          <div className="pt-qam-spec-title">{t("qam.batteryInfo")}</div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.remaining")}</div><div className="pt-qam-spec-value">{battery?.energy_now_wh != null ? qamNumber(battery.energy_now_wh, "Wh") : battery?.charge_now_mah != null ? qamNumber(battery.charge_now_mah, "mAh", 0) : "-"}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.fullEnergy")}</div><div className="pt-qam-spec-value">{battery?.energy_full_wh != null ? qamNumber(battery.energy_full_wh, "Wh") : battery?.charge_full_mah != null ? qamNumber(battery.charge_full_mah, "mAh", 0) : "-"}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.fullDesign")}</div><div className="pt-qam-spec-value">{battery ? battery.energy_full_wh !== null || battery.energy_design_wh !== null ? `${qamNumber(battery.energy_full_wh, "").trimEnd()} / ${qamNumber(battery.energy_design_wh, "Wh")}` : `${qamNumber(battery.charge_full_mah, "", 0).trimEnd()} / ${qamNumber(battery.charge_design_mah, "mAh", 0)}` : "-"}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.ratio")}</div><div className="pt-qam-spec-value">{battery ? qamNumber(battery.capacity_ratio_percent, "%", 1) : "-"}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.cycles")}</div><div className="pt-qam-spec-value">{battery?.cycle_count == null ? "-" : qamNumber(battery.cycle_count, t("qam.cyclesUnit"), 0)}</div></div>
         </div>
         <div className="pt-qam-spec-col pt-qam-spec-power">
-          <div className="pt-qam-spec-title">电源参数</div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">电池电压</div><div className="pt-qam-spec-value">{qamNumber(battery?.voltage_v ?? null, "V", 3)}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">电池电流</div><div className="pt-qam-spec-value">{qamNumber(battery?.current_a ?? null, "A", 3)}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">PD 契约</div><div className="pt-qam-spec-value">{adapter ? `${qamNumber(adapter.voltage_v, "V")} · ${qamNumber(adapter.current_a, "A")}` : "-"}</div></div>
-          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">协商上限</div><div className="pt-qam-spec-value">{adapter ? qamNumber(adapter.limit_w, "W") : "-"}</div></div>
+          <div className="pt-qam-spec-title">{t("qam.powerSettings")}</div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.voltage")}</div><div className="pt-qam-spec-value">{qamNumber(battery?.voltage_v ?? null, "V", 3)}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.current")}</div><div className="pt-qam-spec-value">{qamNumber(battery?.current_a ?? null, "A", 3)}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.pd")}</div><div className="pt-qam-spec-value">{adapter ? `${qamNumber(adapter.voltage_v, "V")} · ${qamNumber(adapter.current_a, "A")}` : "-"}</div></div>
+          <div className="pt-qam-spec-field"><div className="pt-qam-spec-label">{t("qam.pdLimit")}</div><div className="pt-qam-spec-value">{adapter ? qamNumber(adapter.limit_w, "W") : "-"}</div></div>
         </div>
       </Focusable>
     </PanelSectionRow>
+    <LocaleFlags />
   </PanelSection></div>;
 }

@@ -1,7 +1,8 @@
 import { Focusable, Toggle } from "@decky/ui";
 import { FaBatteryHalf, FaBolt, FaCheckCircle, FaClock, FaDesktop, FaExclamationTriangle, FaGamepad, FaLayerGroup, FaMicrochip, FaMoon, FaPlug } from "react-icons/fa";
 import { getSessionDetail } from "./backend";
-import { IconLabel, Restrictions, SemanticText, SemanticValue, durationText, reasonText, sessionLabels, timeText } from "./components";
+import { IconLabel, Restrictions, SemanticText, SemanticValue, durationText, reasonText, sessionLabel, timeText } from "./components";
+import { displayGameName, t } from "./i18n";
 import { PageQueryStatus, PageReading } from "./FullPage";
 import { useQuery } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
@@ -51,7 +52,7 @@ export function SessionDetail({ visible }: { visible: boolean }) {
   const view = useView();
   const sessionId = view.sessionId;
   const query = useQuery(`session:${sessionId}`, () => {
-    if (!sessionId) return Promise.reject(new Error("未选择会话"));
+    if (!sessionId) return Promise.reject(new Error(t("session.none")));
     return getSessionDetail(sessionId, 600);
   }, visible);
   const session = query.data?.session;
@@ -64,24 +65,24 @@ export function SessionDetail({ visible }: { visible: boolean }) {
     {session && query.data && <>
       <div className="pt-session-identity">
         <div>
-          <h2><IconLabel icon={FaGamepad}>{session.name}</IconLabel></h2>
+          <h2><IconLabel icon={FaGamepad}>{displayGameName(session.name, session.game_id)}</IconLabel></h2>
           <p className="pt-muted">{timeText(session.started_at, true)} — {timeText(session.ended_at ?? session.last_seen, true)}</p>
         </div>
         <div className="pt-session-status">
-          {session.status === "interrupted" ? <SemanticText role="warning"><IconLabel icon={statusIcon}>{sessionLabels[session.status]}</IconLabel></SemanticText> : <IconLabel icon={statusIcon}>{sessionLabels[session.status]}</IconLabel>}
-          {session.partial_start && <p>中途开始观测，不包含此前耗电</p>}
+          {session.status === "interrupted" ? <SemanticText role="warning"><IconLabel icon={statusIcon}>{sessionLabel(session.status)}</IconLabel></SemanticText> : <IconLabel icon={statusIcon}>{sessionLabel(session.status)}</IconLabel>}
+          {session.partial_start && <p>{t("session.partial")}</p>}
         </div>
       </div>
       <div className="pt-session-facts">
-        <span><IconLabel icon={FaBatteryHalf}>有效电量起止</IconLabel> <SemanticValue value={session.battery_start} unit="%" role="battery" digits={0} /> → <SemanticValue value={session.battery_end} unit="%" role="battery" digits={0} /></span>
-        <span><IconLabel icon={FaClock}>观测跨度</IconLabel> {durationText(duration)}</span>
+        <span><IconLabel icon={FaBatteryHalf}>{t("session.batterySpan")}</IconLabel> <SemanticValue value={session.battery_start} unit="%" role="battery" digits={0} /> → <SemanticValue value={session.battery_end} unit="%" role="battery" digits={0} /></span>
+        <span><IconLabel icon={FaClock}>{t("session.span")}</IconLabel> {durationText(duration)}</span>
       </div>
       <Focusable className="pt-session-layout" flow-children="column">
         <Focusable className="pt-session-main" flow-children="column">
           <div className="pt-toolbar">
-            <Focusable className="pt-control" aria-label="展开硬件功耗域">
-              <span><IconLabel icon={FaMicrochip}>硬件功耗域</IconLabel></span>
-              <Toggle aria-label="展开硬件功耗域" value={view.hardware} onChange={(hardware) => updateView({ hardware })} />
+            <Focusable className="pt-control" aria-label={t("range.hardware")}>
+              <span><IconLabel icon={FaMicrochip}>{t("range.hardware")}</IconLabel></span>
+              <Toggle aria-label={t("range.hardware")} value={view.hardware} onChange={(hardware) => updateView({ hardware })} />
             </Focusable>
           </div>
           <TimeSeriesChart timeline={query.data.timeline} hardware={view.hardware} cursor={sessionId ? view.detailCursors[sessionId] ?? null : null} onCursor={(timestamp) => {
@@ -90,21 +91,21 @@ export function SessionDetail({ visible }: { visible: boolean }) {
         </Focusable>
         <div className="pt-session-summary">
           <section aria-labelledby="pt-session-system-title">
-            <h3 className="pt-section-title" id="pt-session-system-title">整机伴随耗电 · 实测</h3>
-            <PageReading label={<IconLabel icon={FaBolt}>有效累计能量</IconLabel>} layout="below" description={<>
-              有效均值 <SemanticValue value={session.system_wh !== null && session.system_seconds > 0 ? session.system_wh * 3600 / session.system_seconds : null} unit="W" /><br />
-              覆盖 {durationText(session.system_seconds)} / {durationText(duration)}
+            <h3 className="pt-section-title" id="pt-session-system-title">{t("session.systemTitle")}</h3>
+            <PageReading label={<IconLabel icon={FaBolt}>{t("session.systemEnergy")}</IconLabel>} layout="below" description={<>
+              {t("session.mean")} <SemanticValue value={session.system_wh !== null && session.system_seconds > 0 ? session.system_wh * 3600 / session.system_seconds : null} unit="W" /><br />
+              {t("session.coverage", { covered: durationText(session.system_seconds), span: durationText(duration) })}
             </>}><strong className="pt-session-number"><SemanticValue value={session.system_wh} unit="Wh" role="system" /></strong></PageReading>
-            {(systemReason || session.system_wh === null) && <p className="pt-session-cause">{systemReason ? reasonText(systemReason) : "无可用整机累计值"}</p>}
+            {(systemReason || session.system_wh === null) && <p className="pt-session-cause">{systemReason ? reasonText(systemReason) : t("session.noSystem")}</p>}
           </section>
           <section aria-labelledby="pt-session-process-title">
-            <h3 className="pt-section-title" id="pt-session-process-title">游戏进程能量 · 非校准估算</h3>
-            <PageReading label={<IconLabel icon={FaLayerGroup}>CPU + GPU 合计</IconLabel>} layout="below"><strong className="pt-session-number"><SemanticValue value={session.process_wh} unit="Wh" role="process" /></strong></PageReading>
+            <h3 className="pt-section-title" id="pt-session-process-title">{t("session.processTitle")}</h3>
+            <PageReading label={<IconLabel icon={FaLayerGroup}>{t("session.processTotal")}</IconLabel>} layout="below"><strong className="pt-session-number"><SemanticValue value={session.process_wh} unit="Wh" role="process" /></strong></PageReading>
             <div className="pt-session-domains">
               {processDomains.map((domain) => {
                 const energy = session[domain.energy];
                 const seconds = session[domain.seconds];
-                return <PageReading key={domain.energy} label={<IconLabel icon={domain.icon}>{domain.label} 估算</IconLabel>} layout="below" description={<>有效均值 <SemanticValue value={energy !== null && seconds > 0 ? energy * 3600 / seconds : null} unit="W" /><br />覆盖 {durationText(seconds)} / {durationText(duration)}</>}><strong className="pt-session-number"><SemanticValue value={energy} unit="Wh" role="process" /></strong></PageReading>;
+                return <PageReading key={domain.energy} label={<IconLabel icon={domain.icon}>{t("session.domainEstimate", { domain: domain.label })}</IconLabel>} layout="below" description={<>{t("session.mean")} <SemanticValue value={energy !== null && seconds > 0 ? energy * 3600 / seconds : null} unit="W" /><br />{t("session.coverage", { covered: durationText(seconds), span: durationText(duration) })}</>}><strong className="pt-session-number"><SemanticValue value={energy} unit="Wh" role="process" /></strong></PageReading>;
               })}
             </div>
           </section>
@@ -112,8 +113,8 @@ export function SessionDetail({ visible }: { visible: boolean }) {
         </div>
       </Focusable>
       <section className="pt-session-events" aria-labelledby="pt-session-events-title">
-        <h3 className="pt-section-title" id="pt-session-events-title">事件、休眠与缺口</h3>
-        {query.data.timeline.events.length === 0 && <p className="pt-muted">没有已记录事件</p>}
+        <h3 className="pt-section-title" id="pt-session-events-title">{t("session.events")}</h3>
+        {query.data.timeline.events.length === 0 && <p className="pt-muted">{t("session.noEvents")}</p>}
         <ol className="pt-session-event-list">
           {query.data.timeline.events.map((event, index) => <li className="pt-session-event" key={`${event.kind}:${event.timestamp}:${index}`}>
             <span className="pt-muted"><time dateTime={new Date(event.timestamp * 1000).toISOString()}>{timeText(event.timestamp, true)}</time>{event.end !== null && <time dateTime={new Date(event.end * 1000).toISOString()}>→ {timeText(event.end, true)}</time>}</span>

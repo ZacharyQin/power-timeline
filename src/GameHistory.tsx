@@ -2,7 +2,8 @@ import { DialogButtonSecondary, Dropdown, Focusable, NavEntryPositionPreferences
 import type { CSSProperties } from "react";
 import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaGamepad, FaSortAmountDown } from "react-icons/fa";
 import { getGameHistory } from "./backend";
-import { IconLabel, PowerScaleLegend, SemanticText, energyFields, metricIcons, metricLabels, sessionLabels, sortLabels, timeText, valueText } from "./components";
+import { IconLabel, PowerScaleLegend, SemanticText, energyFields, metricIcons, metricLabel, metricOrder, sessionLabel, sortLabel, sortOrder, timeText, valueText } from "./components";
+import { displayGameName, t } from "./i18n";
 import { useQuery } from "./data";
 import { getPowerBand, semanticColors } from "./displaySemantics";
 import { PageQueryStatus } from "./FullPage";
@@ -52,23 +53,23 @@ export function GameHistory({ visible }: { visible: boolean }) {
         .pt-fullpage .pt-history-session { min-height: 88px; }
       }
     `}</style>
-    <h2 className="pt-history-heading">{sessions ? `${view.gameName} · 历次会话` : "按游戏分组的历史记录"}</h2>
+    <h2 className="pt-history-heading">{sessions ? t("history.sessions", { name: displayGameName(view.gameName, view.gameId ?? undefined) }) : t("history.title")}</h2>
     <Focusable className="pt-toolbar" flow-children="row" navEntryPreferPosition={NavEntryPositionPreferences.PREFERRED_CHILD}>
       <Focusable className="pt-control" preferredFocus={view.focus === "history"} onGamepadFocus={() => updateView({ focus: "history" })}>
-        <span className="pt-muted">统计口径</span>
-        <Dropdown aria-label="统计口径" menuLabel="统计口径" selectedOption={view.metric} rgOptions={Object.entries(metricLabels).map(([data, label]) => ({ data, label: <IconLabel icon={metricIcons[data as Metric]}>{label}</IconLabel> }))} onChange={(option) => updateView({ metric: option.data as Metric, gamesOffset: 0, sessionsOffset: 0, focus: "history" })} />
+        <span className="pt-muted">{t("history.metric")}</span>
+        <Dropdown aria-label={t("history.metric")} menuLabel={t("history.metric")} selectedOption={view.metric} rgOptions={metricOrder.map((data) => ({ data, label: <IconLabel icon={metricIcons[data]}>{metricLabel(data)}</IconLabel> }))} onChange={(option) => updateView({ metric: option.data as Metric, gamesOffset: 0, sessionsOffset: 0, focus: "history" })} />
       </Focusable>
       <Focusable className="pt-control" preferredFocus={view.focus === "sort"} onGamepadFocus={() => updateView({ focus: "sort" })}>
-        <span className="pt-muted"><IconLabel icon={FaSortAmountDown}>排序（降序）</IconLabel></span>
-        <Dropdown aria-label="排序（降序）" menuLabel="排序（降序）" selectedOption={view.sort} rgOptions={Object.entries(sortLabels).map(([data, label]) => ({ data, label }))} onChange={(option) => updateView({ sort: option.data as Sort, gamesOffset: 0, sessionsOffset: 0, focus: "sort" })} />
+        <span className="pt-muted"><IconLabel icon={FaSortAmountDown}>{t("history.sort")}</IconLabel></span>
+        <Dropdown aria-label={t("history.sort")} menuLabel={t("history.sort")} selectedOption={view.sort} rgOptions={sortOrder.map((data) => ({ data, label: sortLabel(data) }))} onChange={(option) => updateView({ sort: option.data as Sort, gamesOffset: 0, sessionsOffset: 0, focus: "sort" })} />
       </Focusable>
     </Focusable>
     <div className="pt-history-summary">
-      <span className="pt-muted">全部保留的历史 · 与电池页时间范围独立</span>
-      <span id="pt-history-metric">{metricLabels[view.metric]} · {powerSorted ? "有效平均功率 · W" : "累计能量 · Wh"}</span>
+      <span className="pt-muted">{t("history.scope")}</span>
+      <span id="pt-history-metric">{metricLabel(view.metric)} · {powerSorted ? t("history.powerUnit") : t("history.energyUnit")}</span>
     </div>
     <PageQueryStatus loading={query.loading} error={query.error} retry={query.refresh} />
-    {data && (sessions ? data.sessions.length === 0 : data.games.length === 0) && <div className="pt-muted">没有已记录的游戏会话。仅后台实际发现的游戏进程形成会话。</div>}
+    {data && (sessions ? data.sessions.length === 0 : data.games.length === 0) && <div className="pt-muted">{t("history.empty")}</div>}
     {data && (sessions ? data.sessions.length > 0 : data.games.length > 0) && <Focusable className="pt-history-list" flow-children="column" role="group" aria-labelledby="pt-history-metric" preferredFocus={view.focus.startsWith(sessions ? "session:" : "game:")} navEntryPreferPosition={NavEntryPositionPreferences.PREFERRED_CHILD}>
       {!sessions && data.games.map((game) => {
         const identity = `game:${game.game_id}`;
@@ -77,9 +78,9 @@ export function GameHistory({ visible }: { visible: boolean }) {
           updateView({ page: "sessions", gameId: game.game_id, gameName: game.name, sessionsOffset: view.gameId === game.game_id ? view.sessionsOffset : 0, focus: view.gameId === game.game_id && view.sessionId ? `session:${view.sessionId}` : "history" });
         };
         const reading = powerSorted ? game.average_w : game[energyFields[view.metric]];
-        return <DialogButtonSecondary key={game.game_id} className="pt-history-row" preferredFocus={view.focus === identity} onGamepadFocus={() => updateView({ focus: identity })} onClick={open} onOKActionDescription="查看历次会话">
+        return <DialogButtonSecondary key={game.game_id} className="pt-history-row" preferredFocus={view.focus === identity} onGamepadFocus={() => updateView({ focus: identity })} onClick={open} onOKActionDescription={t("history.openSessions")}>
           <FaGamepad aria-hidden="true" />
-          <span className="pt-history-copy"><span className="pt-history-title">{game.name}</span><span className="pt-history-meta">{game.session_count} 次观测 · 最近 {timeText(game.last_seen, true)}</span></span>
+          <span className="pt-history-copy"><span className="pt-history-title">{displayGameName(game.name, game.game_id)}</span><span className="pt-history-meta">{t("history.meta", { count: game.session_count, time: timeText(game.last_seen, true) })}</span></span>
           <HistoryValue value={reading} powerSorted={powerSorted} metric={view.metric} />
           <FaChevronRight className="pt-history-chevron" aria-hidden="true" />
         </DialogButtonSecondary>;
@@ -91,11 +92,11 @@ export function GameHistory({ visible }: { visible: boolean }) {
           openSession(session.session_id, "sessions");
         };
         const reading = powerSorted ? session.average_w : session[energyFields[view.metric]];
-        return <DialogButtonSecondary key={session.session_id} className="pt-history-row pt-history-session" preferredFocus={view.focus === identity} onGamepadFocus={() => updateView({ focus: identity })} onClick={open} onOKActionDescription="查看会话详情">
+        return <DialogButtonSecondary key={session.session_id} className="pt-history-row pt-history-session" preferredFocus={view.focus === identity} onGamepadFocus={() => updateView({ focus: identity })} onClick={open} onOKActionDescription={t("history.openDetail")}>
           <FaCalendarAlt aria-hidden="true" />
           <span className="pt-history-copy">
-            <span className="pt-history-title"><span>{timeText(session.started_at, true)}</span><span className="pt-history-tag">{session.status === "interrupted" ? <SemanticText role="warning">{sessionLabels[session.status]}</SemanticText> : sessionLabels[session.status]}</span>{session.partial_start && <span className="pt-history-tag">中途开始</span>}</span>
-            <span className="pt-history-meta">最后发现 {timeText(session.last_seen, true)}</span>
+            <span className="pt-history-title"><span>{timeText(session.started_at, true)}</span><span className="pt-history-tag">{session.status === "interrupted" ? <SemanticText role="warning">{sessionLabel(session.status)}</SemanticText> : sessionLabel(session.status)}</span>{session.partial_start && <span className="pt-history-tag">{t("session.partialShort")}</span>}</span>
+            <span className="pt-history-meta">{t("history.lastSeen", { time: timeText(session.last_seen, true) })}</span>
           </span>
           <HistoryValue value={reading} powerSorted={powerSorted} metric={view.metric} />
           <FaChevronRight className="pt-history-chevron" aria-hidden="true" />
@@ -103,9 +104,9 @@ export function GameHistory({ visible }: { visible: boolean }) {
       })}
     </Focusable>}
     {(data || offset > 0) && <Focusable className="pt-history-pager" flow-children="row">
-      {data && <span className="pt-history-count pt-muted">{data.total === 0 ? "0 条" : `${offset + 1} — ${Math.min(offset + limit, data.total)} / ${data.total}`}</span>}
-      {offset > 0 && <DialogButtonSecondary style={{ width: "auto" }} onClick={() => updateView(sessions ? { sessionsOffset: Math.max(0, offset - limit), focus: "history" } : { gamesOffset: Math.max(0, offset - limit), focus: "history" })}><IconLabel icon={FaChevronLeft}>上一页</IconLabel></DialogButtonSecondary>}
-      {data && offset + limit < data.total && <DialogButtonSecondary style={{ width: "auto" }} onClick={() => updateView(sessions ? { sessionsOffset: offset + limit, focus: "history" } : { gamesOffset: offset + limit, focus: "history" })}><IconLabel icon={FaChevronRight}>下一页</IconLabel></DialogButtonSecondary>}
+      {data && <span className="pt-history-count pt-muted">{data.total === 0 ? t("history.countZero") : t("history.count", { from: offset + 1, to: Math.min(offset + limit, data.total), total: data.total })}</span>}
+      {offset > 0 && <DialogButtonSecondary style={{ width: "auto" }} onClick={() => updateView(sessions ? { sessionsOffset: Math.max(0, offset - limit), focus: "history" } : { gamesOffset: Math.max(0, offset - limit), focus: "history" })}><IconLabel icon={FaChevronLeft}>{t("common.previous")}</IconLabel></DialogButtonSecondary>}
+      {data && offset + limit < data.total && <DialogButtonSecondary style={{ width: "auto" }} onClick={() => updateView(sessions ? { sessionsOffset: offset + limit, focus: "history" } : { gamesOffset: offset + limit, focus: "history" })}><IconLabel icon={FaChevronRight}>{t("common.next")}</IconLabel></DialogButtonSecondary>}
     </Focusable>}
     {powerSorted && <PowerScaleLegend />}
   </Focusable>;

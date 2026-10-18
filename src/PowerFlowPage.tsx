@@ -2,6 +2,7 @@ import { DialogButtonSecondary, Focusable } from "@decky/ui";
 import { useState } from "react";
 import { FiBattery, FiChevronDown, FiChevronUp, FiClock, FiCpu, FiGrid, FiInfo, FiLayers, FiMonitor, FiZap } from "react-icons/fi";
 import { IconLabel, Restrictions, SemanticValue, batteryStateText, timeText, valueText } from "./components";
+import { t } from "./i18n";
 import { CorePowerChart, PowerFlowChart, flowColor, flowIsFresh, flowWatts } from "./PowerFlowChart";
 import type { PowerFlowReading } from "./types";
 
@@ -38,38 +39,38 @@ export function PowerFlowPage({ flow, visible }: { flow: PowerFlowReading | null
       @container pt-page (max-width: 719px) { .pt-flow-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
       @container pt-page (max-width: 479px) { .pt-flow-detail-grid { grid-template-columns: minmax(0, 1fr); } }
     `}</style>
-    <div className="pt-flow-status"><span>{flow?.mode === "external" ? "USB-C外接供电" : flow?.mode === "battery" ? "电池独立供电" : "供电状态待确认"} · {batteryStateText(flow?.battery_state ?? "Unknown")}</span><small>{flow ? `采样 ${timeText(flow.timestamp)}` : "等待后台首次采样"}</small></div>
+    <div className="pt-flow-status"><span>{flow?.mode === "external" ? t("flow.modeExternal") : flow?.mode === "battery" ? t("flow.modeBattery") : t("flow.modeUnknown")} · {batteryStateText(flow?.battery_state ?? "Unknown")}</span><small>{flow ? t("flow.sampled", { time: timeText(flow.timestamp) }) : t("flow.waiting")}</small></div>
     <div className="pt-flow-stage">
       <PowerFlowChart flow={flow} active={visible} />
       <dl className="pt-flow-readout">
-        <div><dt>{flow?.mode === "external" ? "USB-C" : flow?.mode === "battery" ? "电池" : "来源未知"}</dt><dd style={{ color: flowColor(current?.mode === "battery" && current.input_w !== null ? -current.input_w : current?.input_w ?? null) }}>{flowWatts(current?.mode === "battery" && current.input_w !== null ? -current.input_w : current?.input_w ?? null)}</dd></div>
+        <div><dt>{flow?.mode === "external" ? t("flow.sourceUsb") : flow?.mode === "battery" ? t("flow.sourceBattery") : t("flow.sourceUnknown")}</dt><dd style={{ color: flowColor(current?.mode === "battery" && current.input_w !== null ? -current.input_w : current?.input_w ?? null) }}>{flowWatts(current?.mode === "battery" && current.input_w !== null ? -current.input_w : current?.input_w ?? null)}</dd></div>
         <div><dt>APU</dt><dd style={{ color: flowColor(current?.apu_w ?? null) }}>{flowWatts(current?.apu_w ?? null)}</dd></div>
-        <div><dt>{flow?.mode === "external" ? "外围设备" : "外围功耗"}</dt><dd style={{ color: flowColor(current?.peripheral_w ?? null) }}>{flowWatts(current?.peripheral_w ?? null)}</dd></div>
-        {flow?.mode === "external" && <div><dt>{(current?.battery_net_w ?? 0) < 0 ? "电池补供" : "电池"}</dt><dd style={{ color: flowColor(current?.battery_net_w ?? null) }}>{flowWatts(current?.battery_net_w ?? null, true)}</dd></div>}
+        <div><dt>{flow?.mode === "external" ? t("flow.peripheralDevices") : t("flow.peripheralPower")}</dt><dd style={{ color: flowColor(current?.peripheral_w ?? null) }}>{flowWatts(current?.peripheral_w ?? null)}</dd></div>
+        {flow?.mode === "external" && <div><dt>{(current?.battery_net_w ?? 0) < 0 ? t("flow.batteryAssist") : t("flow.battery")}</dt><dd style={{ color: flowColor(current?.battery_net_w ?? null) }}>{flowWatts(current?.battery_net_w ?? null, true)}</dd></div>}
       </dl>
     </div>
     <div className="pt-flow-disclosure">
-      <Focusable><DialogButtonSecondary className="pt-compact-button" aria-expanded={expanded} aria-controls="pt-flow-details" onClick={() => setExpanded(!expanded)}><IconLabel icon={expanded ? FiChevronUp : FiChevronDown}>{expanded ? "收起节点详情" : "展开节点详情"}</IconLabel></DialogButtonSecondary></Focusable>
-      <small>实时读取 · 不从图线重算能量</small>
+      <Focusable><DialogButtonSecondary className="pt-compact-button" aria-expanded={expanded} aria-controls="pt-flow-details" onClick={() => setExpanded(!expanded)}><IconLabel icon={expanded ? FiChevronUp : FiChevronDown}>{expanded ? t("flow.collapse") : t("flow.expand")}</IconLabel></DialogButtonSecondary></Focusable>
+      <small>{t("flow.live")}</small>
     </div>
-    {expanded && <section id="pt-flow-details" className="pt-flow-details" aria-label="功率流节点详情">
+    {expanded && <section id="pt-flow-details" className="pt-flow-details" aria-label={t("flow.details")}>
       <div className="pt-flow-detail-grid">
-        <div className="pt-flow-detail"><div className="pt-flow-detail-label"><IconLabel icon={FiZap}>USB-C 实读</IconLabel></div><div className="pt-flow-detail-value">{valueText(current?.input_v ?? null, "V", 3)} · {valueText(current?.input_a ?? null, "A", 3)}</div></div>
-        <div className="pt-flow-detail"><div className="pt-flow-detail-label"><IconLabel icon={FiBattery}>电池端实读</IconLabel></div><div className="pt-flow-detail-value">{valueText(current?.battery_v ?? null, "V", 3)} · {valueText(current?.battery_a ?? null, "A", 3)}</div><small>净功率 <span style={{ color: flowColor(current?.battery_net_w ?? null) }}>{flowWatts(current?.battery_net_w ?? null, true)}</span>（＋充入／−放出）</small></div>
-        <div className="pt-flow-detail"><div className="pt-flow-detail-label"><IconLabel icon={FiZap}>PD协商上限</IconLabel></div><div className="pt-flow-detail-value">{valueText(current?.pd_voltage_v ?? null, "V", 1)} · {valueText(current?.pd_current_a ?? null, "A", 1)}</div><small>{valueText(adapterLimit, "W")} 上限，不是实时输入</small></div>
+        <div className="pt-flow-detail"><div className="pt-flow-detail-label"><IconLabel icon={FiZap}>{t("flow.usbRead")}</IconLabel></div><div className="pt-flow-detail-value">{valueText(current?.input_v ?? null, "V", 3)} · {valueText(current?.input_a ?? null, "A", 3)}</div></div>
+        <div className="pt-flow-detail"><div className="pt-flow-detail-label"><IconLabel icon={FiBattery}>{t("flow.batteryRead")}</IconLabel></div><div className="pt-flow-detail-value">{valueText(current?.battery_v ?? null, "V", 3)} · {valueText(current?.battery_a ?? null, "A", 3)}</div><small>{t("flow.net", { value: "\u0000" }).split("\u0000")[0]}<span style={{ color: flowColor(current?.battery_net_w ?? null) }}>{flowWatts(current?.battery_net_w ?? null, true)}</span>{t("flow.net", { value: "\u0000" }).split("\u0000")[1]}</small></div>
+        <div className="pt-flow-detail"><div className="pt-flow-detail-label"><IconLabel icon={FiZap}>{t("flow.pdLimit")}</IconLabel></div><div className="pt-flow-detail-value">{valueText(current?.pd_voltage_v ?? null, "V", 1)} · {valueText(current?.pd_current_a ?? null, "A", 1)}</div><small>{t("flow.pdNote", { value: valueText(adapterLimit, "W") })}</small></div>
       </div>
-      <div className="pt-flow-chip-header"><small><IconLabel icon={FiClock}>同批读取芯片平均报告，平均窗口不等于完全同步</IconLabel></small><span><IconLabel icon={FiCpu}>APU <SemanticValue value={current?.apu_w ?? null} unit="W" digits={3} /></IconLabel></span></div>
+      <div className="pt-flow-chip-header"><small><IconLabel icon={FiClock}>{t("flow.rails")}</IconLabel></small><span><IconLabel icon={FiCpu}>APU <SemanticValue value={current?.apu_w ?? null} unit="W" digits={3} /></IconLabel></span></div>
       <div className="pt-flow-detail-grid">{([
         ["cpu", "CPU VDD", FiCpu], ["soc", "SoC", FiLayers], ["gpu", "GPU", FiMonitor],
       ] as const).map(([key, label, icon]) => {
         const rail = current?.rails[key];
         return <div key={key} className="pt-flow-detail"><div className="pt-flow-rail-heading"><IconLabel icon={icon}>{label}</IconLabel><strong><SemanticValue value={rail?.w ?? null} unit="W" digits={3} /></strong></div><small>{valueText(rail?.voltage_v ?? null, "V", 3)} · {valueText(rail?.current_a ?? null, "A", 3)}</small></div>;
       })}</div>
-      <div className="pt-flow-core-heading"><strong><IconLabel icon={FiGrid}>每核功率</IconLabel></strong><small>同一瓦数刻度 · 不是利用率</small></div>
+      <div className="pt-flow-core-heading"><strong><IconLabel icon={FiGrid}>{t("flow.cores")}</IconLabel></strong><small>{t("flow.coresNote")}</small></div>
       <CorePowerChart values={current?.cores_w ?? [null, null, null, null]} />
-      <p className="pt-muted"><IconLabel icon={FiInfo}>外围始终按总输入减APU、再减电池净功率计算（电池独立放电时电池项为0），负值也直接显示；包含转换损耗、未覆盖负载和平均窗口差，不是外围独立电表。四核和芯片轨不强制配平。</IconLabel></p>
-      <small>读取窗口 {valueText(current?.read_span_ms ?? null, "ms", 1)} · APU来源 {current?.apu_source === "gpu_metrics" ? "AMDGPU gpu_metrics" : current?.apu_source === "hwmon" ? "AMDGPU hwmon" : "未上报"} · 未做外接功率计校准</small>
-      <Restrictions errors={flow?.errors} label="功率流数据状态" />
+      <p className="pt-muted"><IconLabel icon={FiInfo}>{t("flow.note")}</IconLabel></p>
+      <small>{t("flow.meta", { span: valueText(current?.read_span_ms ?? null, "ms", 1), source: current?.apu_source === "gpu_metrics" ? t("flow.sourceGpu") : current?.apu_source === "hwmon" ? t("flow.sourceHwmon") : t("flow.sourceNone") })}</small>
+      <Restrictions errors={flow?.errors} label={t("flow.status")} />
     </section>}
   </section>;
 }

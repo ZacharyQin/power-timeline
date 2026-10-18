@@ -2,6 +2,7 @@ import { DialogButtonSecondary, Focusable } from "@decky/ui";
 import type { ReactNode } from "react";
 import { FaExclamationTriangle, FaSyncAlt } from "react-icons/fa";
 import { IconLabel, SemanticText } from "./components";
+import { t } from "./i18n";
 
 export function PageReading({ label, children, description, className = "", layout = "inline" }: {
   label: ReactNode;
@@ -18,16 +19,17 @@ export function PageReading({ label, children, description, className = "", layo
 }
 
 export function PageQueryStatus({ loading, error, retry }: { loading: boolean; error: string | null; retry: () => void }) {
-  return <>{loading && <p className="pt-muted" role="status"><IconLabel icon={FaSyncAlt}>正在读取真实记录…</IconLabel></p>}
+  return <>{loading && <p className="pt-muted" role="status"><IconLabel icon={FaSyncAlt}>{t("common.loading")}</IconLabel></p>}
     {error && <div className="pt-query-error" role="alert">
-      <div><SemanticText role="error"><IconLabel icon={FaExclamationTriangle}>查询失败</IconLabel></SemanticText><p>{error}</p><small>已显示的旧记录不代表当前状态。</small></div>
-      <Focusable><DialogButtonSecondary className="pt-compact-button" onClick={retry}>重新读取</DialogButtonSecondary></Focusable>
+      <div><SemanticText role="error"><IconLabel icon={FaExclamationTriangle}>{t("common.queryFailed")}</IconLabel></SemanticText><p>{error}</p><small>{t("common.staleShown")}</small></div>
+      <Focusable><DialogButtonSecondary className="pt-compact-button" onClick={retry}>{t("common.retry")}</DialogButtonSecondary></Focusable>
     </div>}</>;
 }
 
 export function FullPageStyles() {
   return <style>{`
     .pt-fullpage { container: pt-page / inline-size; --pt-border: color-mix(in srgb, currentColor 18%, transparent); --pt-surface: color-mix(in srgb, currentColor 5%, transparent); }
+    .pt-fullpage .pt-page-scroll { height: 100%; min-height: 0; overflow-y: auto; }
     .pt-fullpage .pt-page-content { box-sizing: border-box; padding: 0 24px; min-width: 0; }
     .pt-fullpage .pt-page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
     .pt-fullpage .pt-page-heading { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }

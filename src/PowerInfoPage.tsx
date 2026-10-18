@@ -3,12 +3,13 @@ import { useState } from "react";
 import { FaBatteryHalf, FaBolt, FaChevronDown, FaChevronUp, FaClock } from "react-icons/fa";
 import { getPowerInfo } from "./backend";
 import { IconLabel, Restrictions, SemanticText, SemanticValue, batteryStateText, reasonText, supplyText, timeText, valueText } from "./components";
+import { t } from "./i18n";
 import { useQuery } from "./data";
 import { PageQueryStatus, PageReading } from "./FullPage";
 import { chargeEstimateText, lastChargeReason, lastChargeText } from "./powerStatus";
 
 function capacityText(charge: number | null, energy: number | null) {
-  if (charge === null) return energy === null ? "未上报" : valueText(energy, "Wh");
+  if (charge === null) return energy === null ? t("common.notReported") : valueText(energy, "Wh");
   return `${valueText(charge, "mAh", 0)}${energy === null ? "" : ` · ${valueText(energy, "Wh")}`}`;
 }
 
@@ -57,70 +58,70 @@ export function PowerInfoPage({ visible }: { visible: boolean }) {
     `}</style>
     <PageQueryStatus loading={query.loading && !info} error={query.error} retry={query.refresh} />
     {info && battery && <div className="pt-power-info">
-      {Date.now() / 1000 - info.timestamp > 10 && <p className="pt-power-alert" role="status"><SemanticText role="warning">当前信息已过期，旧读数不代表当前状态。</SemanticText></p>}
-      <section className="pt-power-summary" aria-label="电池状态概览">
+      {Date.now() / 1000 - info.timestamp > 10 && <p className="pt-power-alert" role="status"><SemanticText role="warning">{t("common.infoStale")}</SemanticText></p>}
+      <section className="pt-power-summary" aria-label={t("power.summary")}>
         <div className="pt-power-metric">
-          <span className="pt-power-metric-label">电量</span>
+          <span className="pt-power-metric-label">{t("power.level")}</span>
           <div className="pt-power-metric-value"><SemanticValue value={battery.percent} unit="%" role="battery" digits={0} /><span className="pt-power-metric-note">{batteryStateText(battery.state)} · {supplyText(battery.supply)}</span></div>
         </div>
         <div className="pt-power-metric">
-          <span className="pt-power-metric-label">{charging ? "电池净充电功率" : "电池净功率"}</span>
-          <div className="pt-power-metric-value"><SemanticValue value={battery.net_w} unit="W" /><span className="pt-power-metric-note">{battery.system_w === null ? battery.supply === "external" ? "插电 · 整机未知" : "整机未知" : <>整机 <SemanticValue value={battery.system_w} unit="W" /></>}</span></div>
+          <span className="pt-power-metric-label">{charging ? t("power.netCharge") : t("power.netBattery")}</span>
+          <div className="pt-power-metric-value"><SemanticValue value={battery.net_w} unit="W" /><span className="pt-power-metric-note">{battery.system_w === null ? battery.supply === "external" ? t("power.pluggedUnknown") : t("power.systemUnknown") : <>{t("power.systemInline")} <SemanticValue value={battery.system_w} unit="W" /></>}</span></div>
         </div>
         <div className="pt-power-metric">
-          <span className="pt-power-metric-label">{charging ? "预计充满（系统估计）" : "距上次充电结束"}</span>
+          <span className="pt-power-metric-label">{charging ? t("power.eta") : t("power.sinceCharge")}</span>
           <div className="pt-power-metric-value pt-power-timing">{charging ? chargeEstimateText(info, battery.state, battery.supply, info.timestamp) : lastChargeText(info)}</div>
         </div>
       </section>
-      {info.errors.system_w && <p className="pt-power-alert" role="status"><SemanticText role="warning">整机读数：{reasonText(info.errors.system_w)}</SemanticText></p>}
-      {info.estimate.error && <p className="pt-power-alert" role="status"><SemanticText role="warning">UPower 读取失败，相关系统估计暂不可用。</SemanticText></p>}
+      {info.errors.system_w && <p className="pt-power-alert" role="status"><SemanticText role="warning">{t("power.systemReason", { reason: reasonText(info.errors.system_w) })}</SemanticText></p>}
+      {info.estimate.error && <p className="pt-power-alert" role="status"><SemanticText role="warning">{t("power.upowerFail")}</SemanticText></p>}
       <div className="pt-power-cards">
-        <section className="pt-power-card" aria-label="电池档案">
-          <header className="pt-power-card-heading"><h2><IconLabel icon={FaBatteryHalf}>电池档案</IconLabel></h2><span className="pt-power-model">{battery.model ?? "型号未上报"}</span></header>
-          <PageReading label={`满充 / 设计${battery.energy_basis === "design_voltage" ? "（换算）" : battery.energy_basis === "mixed" ? "（含换算）" : ""}`}>
+        <section className="pt-power-card" aria-label={t("power.profile")}>
+          <header className="pt-power-card-heading"><h2><IconLabel icon={FaBatteryHalf}>{t("power.profile")}</IconLabel></h2><span className="pt-power-model">{battery.model ?? t("power.modelUnknown")}</span></header>
+          <PageReading label={`${t("power.fullDesign")}${battery.energy_basis === "design_voltage" ? t("power.converted") : battery.energy_basis === "mixed" ? t("power.mixed") : ""}`}>
             {battery.energy_full_wh !== null || battery.energy_design_wh !== null ? <>{valueText(battery.energy_full_wh, "").trimEnd()} / {valueText(battery.energy_design_wh, "Wh")}</> : <>{valueText(battery.charge_full_mah, "", 0).trimEnd()} / {valueText(battery.charge_design_mah, "mAh", 0)}</>}
           </PageReading>
-          <PageReading label="原始容量比">{valueText(battery.capacity_ratio_percent, "%", 1)}</PageReading>
-          <PageReading label="循环次数">{battery.cycle_count === null ? "未知 · 未确认" : valueText(battery.cycle_count, "次", 0)}</PageReading>
+          <PageReading label={t("power.ratio")}>{valueText(battery.capacity_ratio_percent, "%", 1)}</PageReading>
+          <PageReading label={t("power.cycles")}>{battery.cycle_count === null ? t("power.cyclesUnknown") : valueText(battery.cycle_count, t("power.cyclesUnit"), 0)}</PageReading>
         </section>
-        <section className="pt-power-card" aria-label="电源参数">
-          <header className="pt-power-card-heading"><h2><IconLabel icon={FaBolt}>电源参数</IconLabel></h2></header>
-          <PageReading label="PD 契约">{valueText(info.adapter.voltage_v, "V", 1)} · {valueText(info.adapter.current_a, "A", 1)}</PageReading>
-          <PageReading label="协商上限">{valueText(info.adapter.limit_w, "W", 1)} · 非实测</PageReading>
-          <PageReading label="电池电压 / 电流">{valueText(battery.voltage_v, "V")} · {valueText(battery.current_a, "A")}</PageReading>
+        <section className="pt-power-card" aria-label={t("power.settings")}>
+          <header className="pt-power-card-heading"><h2><IconLabel icon={FaBolt}>{t("power.settings")}</IconLabel></h2></header>
+          <PageReading label={t("power.pd")}>{valueText(info.adapter.voltage_v, "V", 1)} · {valueText(info.adapter.current_a, "A", 1)}</PageReading>
+          <PageReading label={t("power.pdLimit")}>{t("power.notMeasured", { value: valueText(info.adapter.limit_w, "W", 1) })}</PageReading>
+          <PageReading label={t("power.voltageCurrent")}>{valueText(battery.voltage_v, "V")} · {valueText(battery.current_a, "A")}</PageReading>
         </section>
       </div>
-      <div className="pt-power-charge" aria-label="充电记录">
-        <IconLabel icon={FaClock}>充电记录</IconLabel>
-        <span className="pt-power-charge-value">{charging ? "正在充电 · 结束后开始计时" : info.last_charge.ended_at === null ? "尚未确认结束时间" : `上次结束 ${timeText(info.last_charge.ended_at, true)}`}</span>
+      <div className="pt-power-charge" aria-label={t("power.chargeLog")}>
+        <IconLabel icon={FaClock}>{t("power.chargeLog")}</IconLabel>
+        <span className="pt-power-charge-value">{charging ? t("power.chargingNow") : info.last_charge.ended_at === null ? t("power.chargeEndUnknown") : t("power.lastEnded", { time: timeText(info.last_charge.ended_at, true) })}</span>
         {chargeReason && <span className="pt-power-charge-note">{chargeReason}</span>}
       </div>
       <div className="pt-power-disclosure">
-        <Focusable><DialogButtonSecondary className="pt-compact-button" aria-expanded={expanded} aria-controls="pt-power-details" onClick={() => setExpanded(!expanded)}><IconLabel icon={expanded ? FaChevronUp : FaChevronDown}>{expanded ? "收起参数与数据来源" : "更多参数与数据来源"}</IconLabel></DialogButtonSecondary></Focusable>
-        <span className="pt-power-updated">读取于 {timeText(info.timestamp)}</span>
+        <Focusable><DialogButtonSecondary className="pt-compact-button" aria-expanded={expanded} aria-controls="pt-power-details" onClick={() => setExpanded(!expanded)}><IconLabel icon={expanded ? FaChevronUp : FaChevronDown}>{expanded ? t("power.less") : t("power.more")}</IconLabel></DialogButtonSecondary></Focusable>
+        <span className="pt-power-updated">{t("power.readAt", { time: timeText(info.timestamp) })}</span>
       </div>
-      {expanded && <section id="pt-power-details" className="pt-power-details" aria-label="完整电池参数与数据来源">
+      {expanded && <section id="pt-power-details" className="pt-power-details" aria-label={t("power.details")}>
         <div className="pt-power-detail-grid">
-          <PageReading label="剩余容量">{capacityText(battery.charge_now_mah, battery.energy_now_wh)}</PageReading>
-          <PageReading label="系统容量估计">{valueText(battery.system_capacity_percent, "%", 0)}</PageReading>
-          <PageReading label="当前满充容量">{capacityText(battery.charge_full_mah, battery.energy_full_wh)}</PageReading>
-          <PageReading label="设计容量">{capacityText(battery.charge_design_mah, battery.energy_design_wh)}</PageReading>
-          <PageReading label="电池电压">{valueText(battery.voltage_v, "V", 3)}</PageReading>
-          <PageReading label="电池电流">{valueText(battery.current_a, "A", 3)}</PageReading>
-          <PageReading label="制造商">{battery.manufacturer ?? "未上报"}</PageReading>
-          <PageReading label="电池类型">{battery.technology && battery.technology !== "Unknown" ? battery.technology : "未上报"}</PageReading>
-          <PageReading label="当前整机功率"><SemanticValue value={battery.system_w} unit="W" /></PageReading>
-          <PageReading label="充电结束观测窗口">{valueText(info.last_charge.uncertainty_seconds, "秒")}</PageReading>
-          <PageReading label="预计充满">{chargeEstimateText(info, battery.state, battery.supply, info.timestamp)}</PageReading>
+          <PageReading label={t("power.remaining")}>{capacityText(battery.charge_now_mah, battery.energy_now_wh)}</PageReading>
+          <PageReading label={t("power.systemCapacity")}>{valueText(battery.system_capacity_percent, "%", 0)}</PageReading>
+          <PageReading label={t("power.fullNow")}>{capacityText(battery.charge_full_mah, battery.energy_full_wh)}</PageReading>
+          <PageReading label={t("power.design")}>{capacityText(battery.charge_design_mah, battery.energy_design_wh)}</PageReading>
+          <PageReading label={t("power.voltage")}>{valueText(battery.voltage_v, "V", 3)}</PageReading>
+          <PageReading label={t("power.current")}>{valueText(battery.current_a, "A", 3)}</PageReading>
+          <PageReading label={t("power.maker")}>{battery.manufacturer ?? t("common.notReported")}</PageReading>
+          <PageReading label={t("power.tech")}>{battery.technology && battery.technology !== "Unknown" ? battery.technology : t("common.notReported")}</PageReading>
+          <PageReading label={t("power.systemNow")}><SemanticValue value={battery.system_w} unit="W" /></PageReading>
+          <PageReading label={t("power.chargeWindow")}>{valueText(info.last_charge.uncertainty_seconds, t("power.seconds"))}</PageReading>
+          <PageReading label={t("power.estimate")}>{chargeEstimateText(info, battery.state, battery.supply, info.timestamp)}</PageReading>
         </div>
-        <p>原始满充／设计容量比超过 100% 不直接表示故障；UPower 系统容量估计不是独立第二次实测。这些字段不构成完整健康诊断，未知循环次数不补成 0 次。</p>
-        <p>{battery.energy_basis === "design_voltage" ? "Wh 由电荷量与设计电压换算，不是另一份能量实测。" : battery.energy_basis === "mixed" ? "部分 Wh 由设计电压换算，其余来自电池上报。" : battery.energy_basis === "reported" ? "Wh 来自电池能量字段上报。" : "系统未提供可换算的电池能量。"}</p>
-        <p>PD 电压 × 电流仅为协商上限，不是充电器铭牌功率或实时输入，不能减去电池净功率推算整机；未接电或契约无效时保持未知。仅确认电池独立放电时，电池侧读数才用于整机功率。</p>
-        <p>充电结束点是连续样本间的观测边界，不是精确物理瞬间或拔电时间；跨缺口保留已知日期，但不能确认可靠经过时长。</p>
-        <p>UPower 充满估计会随速率变化，不是精确倒计时；零值、过期或状态不匹配时不报分钟数{info.estimate.updated_at === null ? "。" : `。来源更新 ${timeText(info.estimate.updated_at)}。`}</p>
-        {info.estimate.error && <p><SemanticText role="warning">UPower 技术原因：{info.estimate.error}</SemanticText></p>}
+        <p>{t("power.health")}</p>
+        <p>{battery.energy_basis === "design_voltage" ? t("power.basisDesign") : battery.energy_basis === "mixed" ? t("power.basisMixed") : battery.energy_basis === "reported" ? t("power.basisReported") : t("power.basisNone")}</p>
+        <p>{t("power.pdExplain")}</p>
+        <p>{t("power.chargeExplain")}</p>
+        <p>{t("power.upowerExplain")}{info.estimate.updated_at === null ? "" : t("power.upowerUpdated", { time: timeText(info.estimate.updated_at) })}</p>
+        {info.estimate.error && <p><SemanticText role="warning">{t("power.upowerReason", { reason: info.estimate.error })}</SemanticText></p>}
       </section>}
-      <Restrictions errors={info.errors} label="电源数据状态" />
+      <Restrictions errors={info.errors} label={t("power.status")} />
     </div>}
   </>;
 }

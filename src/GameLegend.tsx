@@ -2,6 +2,7 @@ import { DialogButtonSecondary, Focusable } from "@decky/ui";
 import { useId, useState } from "react";
 import { GameIcon } from "./GameIcon";
 import type { TimelineGame } from "./timelineEvents";
+import { t } from "./i18n";
 
 const PREVIEW_SIZE = 2;
 const PAGE_SIZE = 6;
@@ -16,7 +17,7 @@ export function GameLegend({ games }: { games: readonly TimelineGame[] }) {
   if (games.length === 0) return null;
   const from = expanded ? currentPage * PAGE_SIZE : 0;
   const visible = games.slice(from, from + (expanded ? PAGE_SIZE : PREVIEW_SIZE));
-  return <Focusable className="pt-game-legend" flow-children="column" aria-label="游戏区间图例">
+  return <Focusable className="pt-game-legend" flow-children="column" aria-label={t("legend.aria")}>
     <style>{`
       .pt-fullpage .pt-chart-auxiliary > .pt-game-legend { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--pt-border); }
       .pt-fullpage .pt-game-legend-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 6px; }
@@ -31,9 +32,9 @@ export function GameLegend({ games }: { games: readonly TimelineGame[] }) {
       @container pt-page (max-width: 519px) { .pt-fullpage .pt-game-entries { grid-template-columns: minmax(0, 1fr); } }
     `}</style>
     <Focusable className="pt-game-legend-heading" flow-children="row">
-      <span className="pt-muted">游戏区间 · {games.length} 款</span>
+      <span className="pt-muted">{t("legend.count", { count: games.length })}</span>
       {(games.length > PREVIEW_SIZE || expanded) && <DialogButtonSecondary className="pt-compact-button" aria-expanded={expanded} aria-controls={listId} onClick={() => { setPage(0); setExpanded(!expanded); }}>
-        {expanded ? "收起游戏图例" : `全部 ${games.length} 款`}
+        {expanded ? t("legend.collapse") : t("legend.all", { count: games.length })}
       </DialogButtonSecondary>}
     </Focusable>
     <div id={listId} className="pt-game-entries" role="list">
@@ -44,9 +45,9 @@ export function GameLegend({ games }: { games: readonly TimelineGame[] }) {
       </span>)}
     </div>
     {expanded && lastPage > 0 && <Focusable className="pt-game-legend-pager" flow-children="row">
-      <span className="pt-muted" aria-live="polite">{from + 1}–{from + visible.length} / {games.length} 款 · 第 {currentPage + 1}/{lastPage + 1} 页</span>
-      <DialogButtonSecondary className="pt-compact-button" disabled={currentPage === 0} aria-disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>上一页</DialogButtonSecondary>
-      <DialogButtonSecondary className="pt-compact-button" disabled={currentPage === lastPage} aria-disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>下一页</DialogButtonSecondary>
+      <span className="pt-muted" aria-live="polite">{t("legend.page", { from: from + 1, to: from + visible.length, count: games.length, page: currentPage + 1, pages: lastPage + 1 })}</span>
+      <DialogButtonSecondary className="pt-compact-button" disabled={currentPage === 0} aria-disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t("common.previous")}</DialogButtonSecondary>
+      <DialogButtonSecondary className="pt-compact-button" disabled={currentPage === lastPage} aria-disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>{t("common.next")}</DialogButtonSecondary>
     </Focusable>}
   </Focusable>;
 }
