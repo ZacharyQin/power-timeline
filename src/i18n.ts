@@ -1,11 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { en, type MessageKey } from "./locales/en";
+import { es } from "./locales/es";
+import { ja } from "./locales/ja";
+import { ko } from "./locales/ko";
+import { pt } from "./locales/pt";
 import { zhCn } from "./locales/zh-cn";
 
-export type Locale = "en" | "zh-cn";
-export const locales = ["zh-cn", "en"] as const satisfies readonly Locale[];
+export type Locale = "en" | "zh-cn" | "pt" | "es" | "ja" | "ko";
+export const locales = ["zh-cn", "en", "pt", "es", "ja", "ko"] as const satisfies readonly Locale[];
 
-const catalogs: Record<Locale, Record<MessageKey, string>> = { en, "zh-cn": zhCn };
+const catalogs: Record<Locale, Record<MessageKey, string>> = { en, "zh-cn": zhCn, pt, es, ja, ko };
 const storageKey = "power-timeline.locale";
 const listeners = new Set<() => void>();
 
@@ -29,13 +33,17 @@ function languageHints(): string[] {
 export function detectLocale(): Locale {
   const blob = languageHints().join(" ").toLowerCase();
   if (/(schinese|tchinese|(^|[^a-z])zh([^a-z]|$))/.test(blob)) return "zh-cn";
+  if (/(japanese|(^|[^a-z])ja([^a-z]|$))/.test(blob)) return "ja";
+  if (/(koreana|korean|(^|[^a-z])ko([^a-z]|$))/.test(blob)) return "ko";
+  if (/(portuguese|brazilian|(^|[^a-z])pt([^a-z]|$))/.test(blob)) return "pt";
+  if (/(spanish|latam|(^|[^a-z])es([^a-z]|$))/.test(blob)) return "es";
   return "en";
 }
 
 function storedLocale(): Locale | null {
   try {
     const saved = localStorage.getItem(storageKey);
-    return saved === "en" || saved === "zh-cn" ? saved : null;
+    return saved !== null && (locales as readonly string[]).includes(saved) ? saved as Locale : null;
   } catch {
     return null;
   }
@@ -80,7 +88,8 @@ export function useLocale(): Locale {
 }
 
 export function numberLocale(): string {
-  return getLocale() === "zh-cn" ? "zh-CN" : "en";
+  const tags: Record<Locale, string> = { "zh-cn": "zh-CN", en: "en", pt: "pt-PT", es: "es-ES", ja: "ja", ko: "ko" };
+  return tags[getLocale()];
 }
 
 export function t(key: MessageKey, vars?: Record<string, string | number>): string {

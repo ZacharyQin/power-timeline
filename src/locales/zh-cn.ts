@@ -385,4 +385,8 @@ export const zhCn: Record<MessageKey, string> = {
   "lang.zh": "中文",
   "lang.en": "英文",
   "lang.confirm": "使用{language}",
+  "lang.pt": "葡萄牙语",
+  "lang.es": "西班牙语",
+  "lang.ja": "日语",
+  "lang.ko": "韩语",
 };

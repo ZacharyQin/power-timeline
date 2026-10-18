@@ -40,7 +40,7 @@ jobs:
           package = root / "dist/power-timeline-0.2.0.zip"
           members = [root / name for name in (
               "plugin.json", "package.json", "main.py", "LICENSE",
-              "README.md", "README.zh-CN.md", "dist/index.js")]
+              "README.md", "README.zh-CN.md", "README.pt.md", "README.es.md", "README.ja.md", "README.ko.md", "dist/index.js")]
           members += sorted((root / "py_modules").glob("*.py"))
           with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
               for path in members:

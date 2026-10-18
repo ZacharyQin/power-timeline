@@ -5,6 +5,10 @@ import { setLocale, t, useLocale, type Locale } from "./i18n";
 const flags: { locale: Locale; confirm: string }[] = [
   { locale: "zh-cn", confirm: "使用中文" },
   { locale: "en", confirm: "use English" },
+  { locale: "pt", confirm: "usar português" },
+  { locale: "es", confirm: "usar español" },
+  { locale: "ja", confirm: "日本語を使う" },
+  { locale: "ko", confirm: "한국어 사용" },
 ];
 
 function star(cx: number, cy: number, radius: number) {
@@ -40,7 +44,52 @@ function UsFlag() {
     }))}
   </svg>;
 }
+function PortugalFlag() {
+  return <svg viewBox="0 0 30 20" aria-hidden="true">
+    <rect width="12" height="20" fill="#006600" />
+    <rect x="12" width="18" height="20" fill="#FF0000" />
+    <circle cx="12" cy="10" r="4.2" fill="#FFCC00" />
+    <circle cx="12" cy="10" r="2.4" fill="#fff" />
+    <circle cx="12" cy="10" r="1.2" fill="#003399" />
+  </svg>;
+}
 
+function SpainFlag() {
+  return <svg viewBox="0 0 30 20" aria-hidden="true">
+    <rect width="30" height="20" fill="#AA151B" />
+    <rect y="5" width="30" height="10" fill="#F1BF00" />
+  </svg>;
+}
+
+function JapanFlag() {
+  return <svg viewBox="0 0 30 20" aria-hidden="true">
+    <rect width="30" height="20" fill="#fff" />
+    <circle cx="15" cy="10" r="5.2" fill="#BC002D" />
+  </svg>;
+}
+
+function KoreaFlag() {
+  return <svg viewBox="0 0 30 20" aria-hidden="true">
+    <rect width="30" height="20" fill="#fff" />
+    <circle cx="15" cy="10" r="4.6" fill="#CD2E3A" />
+    <path d="M15 5.4a4.6 4.6 0 0 1 0 9.2 2.3 2.3 0 0 1 0-4.6 2.3 2.3 0 0 0 0-4.6z" fill="#0047A0" />
+    <g fill="#111" stroke="#111" strokeWidth="0.45">
+      <path d="M4 3.2h3.2M4 4.4h3.2M4 5.6h1.2M6 5.6h1.2" />
+      <path d="M22.8 3.2h3.2M22.8 4.4h1.2M25.2 4.4h.8M22.8 5.6h3.2" />
+      <path d="M4 14.2h3.2M4 15.4h1.2M6 15.4h1.2M4 16.6h3.2" />
+      <path d="M22.8 14.2h1.2M25.2 14.2h.8M22.8 15.4h3.2M22.8 16.6h1.2M25.2 16.6h.8" />
+    </g>
+  </svg>;
+}
+
+function FlagPicture({ locale }: { locale: Locale }) {
+  if (locale === "zh-cn") return <ChinaFlag />;
+  if (locale === "pt") return <PortugalFlag />;
+  if (locale === "es") return <SpainFlag />;
+  if (locale === "ja") return <JapanFlag />;
+  if (locale === "ko") return <KoreaFlag />;
+  return <UsFlag />;
+}
 export function LocaleFlags() {
   const locale = useLocale();
   const nodes = useRef<(HTMLDivElement | null)[]>([]);
@@ -64,7 +113,7 @@ export function LocaleFlags() {
     if (Number.isInteger(index)) setLocale(flags[index].locale);
   }}>
     <style>{`
-      .pt-locale-row { display: block; margin-top: 20px; touch-action: pan-y; }
+      .pt-locale-row { display: block; margin-top: 20px; max-width: 100%; overflow-x: auto; touch-action: pan-y; }
       .pt-locale-flags { display: flex; align-items: center; gap: 12px; width: max-content; }
       .pt-locale-flag { position: relative; width: 32px; height: 22px; border-radius: 3px; overflow: hidden; }
       .pt-locale-flag svg { display: block; width: 100%; height: 100%; }
@@ -80,7 +129,7 @@ export function LocaleFlags() {
         focusFlag(next);
         return true;
       }}>
-        {flag.locale === "zh-cn" ? <ChinaFlag /> : <UsFlag />}
+        <FlagPicture locale={flag.locale} />
       </Focusable>)}
     </Focusable>
   </div>;

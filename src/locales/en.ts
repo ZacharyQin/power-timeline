@@ -383,6 +383,10 @@ export const en = {
   "lang.zh": "Chinese",
   "lang.en": "English",
   "lang.confirm": "Use {language}",
+  "lang.pt": "Portuguese",
+  "lang.es": "Spanish",
+  "lang.ja": "Japanese",
+  "lang.ko": "Korean",
 } as const;
 
 export type MessageKey = keyof typeof en;
