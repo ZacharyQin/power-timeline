@@ -418,7 +418,35 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       {gapBackgrounds(25, 323, 162)}
       {plot("battery_percent", 35, 145, 100)}
       {series.map((item) => plot(item.key, 203, 313, maxW))}
-      {selected && markerTime >= start && markerTime <= end && <line x1={x(markerTime)} y1="25" x2={x(markerTime)} y2="323" stroke="currentColor" strokeDasharray="2 3" />}
+      {selected && markerTime >= start && markerTime <= end && (() => {
+        const markerX = x(markerTime);
+        const placeLeft = markerX > (left + right) / 2;
+        const textX = placeLeft ? markerX - 8 : markerX + 8;
+        const anchor = placeLeft ? "end" : "start";
+        const batteryY = selected.battery_percent === null ? 90 : 35 + (145 - 35) * (1 - Math.min(100, Math.max(0, selected.battery_percent)) / 100);
+        const powerY = selected.system_w === null || maxW <= 0 ? 258 : 203 + (313 - 203) * (1 - Math.min(maxW, Math.max(0, selected.system_w)) / maxW);
+        const date = new Date(markerTime * 1000);
+        const when = span > 36 * 3600 ? `${date.getMonth() + 1}/${date.getDate()} ${padTime(date.getHours())}:${padTime(date.getMinutes())}` : `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+        const playing = (gameIntervals?.spans ?? []).filter((spanItem) => markerTime >= spanItem.from && markerTime <= spanItem.to).sort((a, b) => b.from - a.from)[0];
+        const gameName = playing ? [...playing.game.name].slice(0, 18).join("") + ([...playing.game.name].length > 18 ? "…" : "") : "";
+        const nameWidth = [...gameName].reduce((sum, char) => sum + (char.charCodeAt(0) > 255 ? 12 : 7), 0);
+        const blockWidth = playing ? 22 + nameWidth : 0;
+        const blockX = playing ? Math.max(left, Math.min(placeLeft ? textX - blockWidth : textX, right - blockWidth)) : textX;
+        const labelY = Math.max(46, Math.min(batteryY, 118));
+        const valueX = playing ? (placeLeft ? blockX + blockWidth : blockX) : textX;
+        return <g fill="#fff" style={{ color: "#fff" }}>
+          <line x1={markerX} y1="25" x2={markerX} y2="323" stroke="#fff" strokeOpacity="0.45" />
+          {selected.battery_percent !== null && <circle cx={markerX} cy={batteryY} r="3.5" stroke="none" />}
+          {selected.system_w !== null && <circle cx={markerX} cy={powerY} r="3.5" stroke="none" />}
+          {playing && <>
+            <GameIcon gameId={playing.game.id} svg x={blockX} y={labelY - 30} />
+            <text x={blockX + 22} y={labelY - 16} textAnchor="start" fontSize="12" stroke="none">{gameName}</text>
+          </>}
+          <text x={valueX} y={labelY} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="13" fontWeight="600" stroke="none">{selected.battery_percent === null ? "—" : `${Math.round(selected.battery_percent)}%`}</text>
+          <text x={valueX} y={labelY + 16} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="12" stroke="none">{selected.system_w === null ? "整机 —" : `${selected.system_w.toFixed(2)} W`}</text>
+          <text x={valueX} y={labelY + 32} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="11" opacity="0.82" stroke="none">{when}</text>
+        </g>;
+      })()}
       {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 162 : showGames ? 193 : 175} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${event.label}`}</title></circle>)}
     </svg></Focusable>
     <section className="pt-chart-auxiliary" aria-label="样本读数与图例">

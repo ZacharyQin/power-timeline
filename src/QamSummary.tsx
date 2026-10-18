@@ -1,11 +1,12 @@
 import { useQuickAccessVisible } from "@decky/api";
 import { Focusable, Navigation, PanelSection, PanelSectionRow, Toggle } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
-import { FaBatteryHalf, FaBolt, FaChartLine, FaExclamationCircle, FaGamepad, FaHourglassHalf } from "react-icons/fa";
+import { FaBatteryHalf, FaBolt, FaChartLine, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
 import { getPowerInfo, getTimeline } from "./backend";
 import { QueryStatus, Reading, SemanticStyles, SemanticText, SemanticValue, batteryStateText, sessionLabels, supplyText, valueText } from "./components";
 import { useDocumentVisible, useQuery, useSnapshot } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
+import { GameIcon } from "./GameIcon";
 import { updateView } from "./viewState";
 import { PowerFlowChart } from "./PowerFlowChart";
 import type { PowerInfo } from "./types";
@@ -150,6 +151,15 @@ export function QamSummary() {
       .pt-qam-limit-copy { min-width: 0; }
       .pt-qam-limit-title { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; }
       .pt-qam-limit-note { font-size: 11px; line-height: 15px; color: color-mix(in srgb, #fff 62%, transparent); }
+      .pt-qam-games { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px; }
+      .pt-qam-game { min-width: 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); }
+      .pt-qam-game-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .pt-qam-game .pt-game-icon { width: 28px; height: 28px; object-fit: contain; flex: none; border-radius: 4px; }
+      .pt-qam-game-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 18px; font-weight: 620; }
+      .pt-qam-game-status { margin-left: auto; flex: none; font-size: 10px; line-height: 14px; font-weight: 650; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 999px; color: #7BDCC5; background: color-mix(in srgb, #7BDCC5 16%, transparent); }
+      .pt-qam-game-status-interrupted { color: #E6D58A; background: color-mix(in srgb, #E6D58A 16%, transparent); }
+      .pt-qam-game-status-ended { color: color-mix(in srgb, #fff 62%, transparent); background: color-mix(in srgb, #fff 8%, transparent); }
+      .pt-qam-game-empty { margin: 6px 0 2px; font-size: 12px; line-height: 16px; color: color-mix(in srgb, #fff 52%, transparent); }
     `}</style>
     <SemanticStyles />
     <QueryStatus padding="standard" loading={summary.loading && !summary.snapshot} error={summary.error} retry={summary.refresh} />
@@ -164,8 +174,12 @@ export function QamSummary() {
     {day.data && <PanelSectionRow><TimeSeriesChart timeline={day.data} compact onOpen={() => openPage("timeline")} /></PanelSectionRow>}
     <QueryStatus padding="standard" loading={day.loading && !day.data} error={day.error} retry={day.refresh} />
     {summary.snapshot?.status !== "recording" && summary.snapshot && <Reading padding="standard" icon={FaExclamationCircle} label={summary.snapshot.status === "error" ? <SemanticText role="error">后台未正常记录</SemanticText> : "后台未正常记录"} description={summary.snapshot.error ?? "记录已停止"} />}
-    {summary.snapshot?.sessions.length === 0 && <Reading padding="standard" icon={FaGamepad} label="当前未发现游戏进程" />}
-    {summary.snapshot?.sessions.map((session) => <Reading padding="standard" icon={FaGamepad} key={session.session_id} label={session.name} description={<>{session.status === "interrupted" ? <SemanticText role="warning">{sessionLabels[session.status]}</SemanticText> : sessionLabels[session.status]} · 整机伴随 / 游戏进程估算分开统计</>}>整机 <SemanticValue value={session.system_wh} unit="Wh" role="system" /> · CPU + GPU 估算 <SemanticValue value={session.process_wh} unit="Wh" role="process" /></Reading>)}
+    {summary.snapshot?.sessions.length === 0 && <div className="pt-qam-game-empty">当前未发现游戏进程</div>}
+    {summary.snapshot && summary.snapshot.sessions.length > 0 && <div className="pt-qam-games">
+      {summary.snapshot.sessions.map((session) => <div className="pt-qam-game" key={session.session_id}>
+        <div className="pt-qam-game-head"><GameIcon gameId={session.game_id} /><span className="pt-qam-game-name">{session.name}</span><span className={`pt-qam-game-status pt-qam-game-status-${session.status}`}>{sessionLabels[session.status]}</span></div>
+      </div>)}
+    </div>}
     <PanelSectionRow>
       {/* @ts-expect-error Steam 导航树要显式 focusable，Decky 的 Focusable 类型没声明这个属性。 */}
       <Focusable className="pt-qam-spec" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "12px 16px" }} tabIndex={0} focusable aria-label="电池信息与电源参数" onClick={() => openPage("power")} onOKButton={() => openPage("power")} onOKActionDescription="查看电源与电池">

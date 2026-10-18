@@ -11,7 +11,7 @@ import { isSleepEvent, timelineEventLabel } from "./timelineEvents";
 
 export function BatteryTimeline({ visible }: { visible: boolean }) {
   const view = useView();
-  const key = `timeline:${view.range}:${view.live ? "live" : `${view.bounds.start}:${view.bounds.end}`}`;
+  const key = `timeline:${view.range}`;
   const query = useQuery(key, () => {
     const current = getView();
     const bounds = current.live ? rangeBounds(current.range) : current.bounds;
