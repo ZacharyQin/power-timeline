@@ -6,7 +6,7 @@
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
 </p>
 <p align="center">
-  <a href="#what">What it does</a> · <a href="#install">Install</a> · <a href="#try-it">How to use it</a> · <a href="#language">Language</a> · <a href="#limits">Please note</a>
+  <a href="#what">What it does</a> · <a href="#install">Install</a> · <a href="#try-it">How to use it</a> · <a href="#language">Language</a> · <a href="#limits">Please note</a> · <a href="./CHANGELOG.md">Changelog</a>
 </p>
 <p align="center">
   <img src="./docs/qam-home.jpg" alt="Power Timeline in the Quick Access menu: battery, power flow, the last 24 hours, and battery details" width="100%">

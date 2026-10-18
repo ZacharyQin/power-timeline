@@ -6,7 +6,7 @@
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
 </p>
 <p align="center">
-  <a href="#what">できること</a> · <a href="#install">インストール</a> · <a href="#try-it">使い方</a> · <a href="#language">言語</a> · <a href="#limits">注意</a>
+  <a href="#what">できること</a> · <a href="#install">インストール</a> · <a href="#try-it">使い方</a> · <a href="#language">言語</a> · <a href="#limits">注意</a> · <a href="./CHANGELOG.md">更新履歴</a>
 </p>
 <p align="center">
   <img src="./docs/qam-home.jpg" alt="クイックアクセスメニューの Power Timeline。バッテリー、電力フロー、過去24時間、バッテリー情報" width="100%">

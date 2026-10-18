@@ -6,7 +6,7 @@
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
 </p>
 <p align="center">
-  <a href="#what">能做什么</a> · <a href="#install">安装</a> · <a href="#try-it">怎么用</a> · <a href="#language">语言</a> · <a href="#limits">请注意</a>
+  <a href="#what">能做什么</a> · <a href="#install">安装</a> · <a href="#try-it">怎么用</a> · <a href="#language">语言</a> · <a href="#limits">请注意</a> · <a href="./CHANGELOG.md">更新记录</a>
 </p>
 <p align="center">
   <img src="./docs/qam-home.jpg" alt="QAM 里的 Power Timeline：电量、功率流小图、最近 24 小时和电池信息" width="100%">

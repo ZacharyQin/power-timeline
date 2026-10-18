@@ -6,7 +6,7 @@
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
 </p>
 <p align="center">
-  <a href="#what">하는 일</a> · <a href="#install">설치</a> · <a href="#try-it">사용 방법</a> · <a href="#language">언어</a> · <a href="#limits">알아 두기</a>
+  <a href="#what">하는 일</a> · <a href="#install">설치</a> · <a href="#try-it">사용 방법</a> · <a href="#language">언어</a> · <a href="#limits">알아 두기</a> · <a href="./CHANGELOG.md">변경 기록</a>
 </p>
 <p align="center">
   <img src="./docs/qam-home.jpg" alt="빠른 접근 메뉴의 Power Timeline. 배터리, 전력 흐름, 최근 24시간, 배터리 정보" width="100%">
