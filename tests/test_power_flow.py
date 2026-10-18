@@ -35,22 +35,20 @@ class PowerFlowTests(unittest.TestCase):
         self.assertEqual((result["input_w"], result["battery_net_w"], result["peripheral_w"]), (0, 0, 0))
         uncertain = power_flow(sample("Not charging", battery=1), ec())
         self.assertIsNone(uncertain["battery_net_w"])
-        self.assertIsNone(uncertain["peripheral_w"])
+        self.assertAlmostEqual(uncertain["peripheral_w"], uncertain["input_w"] - uncertain["apu_w"])
 
     def test_external_battery_assist_uses_signed_net_power(self):
         result = power_flow(sample("Discharging", battery=6, apu=8), ec(10000, 500))
         self.assertEqual(result["battery_net_w"], -6)
         self.assertEqual(result["peripheral_w"], 3)
 
-    def test_negative_or_misaligned_difference_is_not_fabricated(self):
+    def test_negative_difference_remains_visible(self):
         result = power_flow(sample(battery=2, apu=3), ec(10000, 400))
-        self.assertEqual(result["difference_w"], -1)
-        self.assertIsNone(result["peripheral_w"])
-        self.assertEqual(result["errors"]["peripheral_w"], "negative_power_difference")
+        self.assertEqual((result["difference_w"], result["peripheral_w"]), (-1, -1))
+        self.assertNotIn("peripheral_w", result["errors"])
         changed = power_flow(sample(), ec(), battery_aligned=False)
-        self.assertIsNone(changed["peripheral_w"])
-        self.assertAlmostEqual(changed["input_w"], 20.040625)
-        self.assertEqual(changed["errors"]["peripheral_w"], "battery_window_changed")
+        self.assertAlmostEqual(changed["peripheral_w"], 6.192496)
+        self.assertNotIn("peripheral_w", changed["errors"])
 
     def test_missing_input_cannot_be_replaced_by_pd_or_old_values(self):
         result = power_flow(sample(), None, "ec_permission_required")

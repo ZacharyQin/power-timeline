@@ -73,7 +73,7 @@ class Storage:
         self._lock = (self.directory / "timeline.lock").open("a+b")
         try:
             fcntl.flock(self._lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self.connection = sqlite3.connect(self.path, timeout=0)
+            self.connection = sqlite3.connect(self.path, timeout=5)
             self.connection.row_factory = sqlite3.Row
             self.connection.execute("PRAGMA foreign_keys=ON")
             self.connection.execute("PRAGMA journal_mode=DELETE")

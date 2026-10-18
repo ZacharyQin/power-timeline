@@ -436,6 +436,22 @@ class RecorderTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.recorder.ingest(sample(2), [], {})
 
+    def test_five_minute_buckets_keep_one_point_and_break_gaps(self):
+        from py_modules.recorder import bucket_series
+        rows = [
+            {"timestamp": 0, "segment": 1, "battery_percent": 90, "break_reason": None},
+            {"timestamp": 60, "segment": 1, "battery_percent": 89, "break_reason": None},
+            {"timestamp": 120, "segment": 1, "battery_percent": 88, "break_reason": None},
+            {"timestamp": 300, "segment": 1, "battery_percent": 80, "break_reason": None},
+            {"timestamp": 360, "segment": 1, "battery_percent": 79, "break_reason": None},
+            {"timestamp": 600, "segment": 1, "battery_percent": None, "break_reason": "gap"},
+            {"timestamp": 900, "segment": 1, "battery_percent": 70, "break_reason": None},
+        ]
+        points = bucket_series(rows, 0, 300)
+        self.assertEqual([point["timestamp"] for point in points], [120, 360, 900])
+        self.assertEqual([point["battery_percent"] for point in points], [88, 79, 70])
+        self.assertEqual(points[0]["segment"], points[1]["segment"])
+        self.assertNotEqual(points[1]["segment"], points[2]["segment"])
 
 if __name__ == "__main__":
     unittest.main()

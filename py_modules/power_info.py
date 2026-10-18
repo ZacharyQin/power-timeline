@@ -137,7 +137,7 @@ class PowerInfo:
                 break
         self._next_pd = time.monotonic() + 30
 
-    async def read(self):
+    async def read(self, refresh_contract=True):
         if self._closed:
             raise RuntimeError("Power information is stopping")
         current = self.telemetry.read_battery(include_details=True)
@@ -213,7 +213,7 @@ class PowerInfo:
         energy_now = energy("energy_now", charge_now)
         energy_full = energy("energy_full", charge_full)
         energy_design = energy("energy_full_design", charge_design)
-        if time.monotonic() >= self._next_pd:
+        if refresh_contract and time.monotonic() >= self._next_pd:
             self._discover_pd()
         pd_voltage = numeric(self._pd_voltage, "pd_voltage_v", True, 1000) if current["supply"] == "external" else None
         pd_current = numeric(self._pd_current, "pd_current_a", True, 1000) if current["supply"] == "external" else None

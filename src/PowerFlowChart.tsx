@@ -61,13 +61,13 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
   const sourceLabel = sourceKind === "plug" ? "USB-C" : sourceKind === "battery" ? "电池" : "来源未知";
   const sourceValue = current?.mode === "battery" && input !== null ? -input : input;
   const batteryAssist = laidOut.some(b => b.reverse);
-  let caption = "外围为差额估算，含通路损耗与窗口差";
+  let caption = compact ? "" : "外围为差额估算，含通路损耗与窗口差";
   if (!flow) caption = "等待真实采样";
   else if (!fresh) caption = "读数已过期，当前分流未知";
-  else if (flow.mode === "unknown") caption = "供电状态未知，流带仅示意";
-  else if (external && current?.input_w === null) caption = "USB-C输入不可读，流带仅示意，外围暂不可分解";
-  else if (current && current.peripheral_w === null) caption = current.difference_w !== null && current.difference_w < 0 ? "分项差额为负，流带仅示意，外围暂不可分解" : "分项未齐，流带仅示意，外围暂不可分解";
-  else if (batteryAssist) caption = "电池补充供电，流带仅示意；外围为差额估算";
+  else if (!compact && flow.mode === "unknown") caption = "供电状态未知，流带仅示意";
+  else if (!compact && external && current?.input_w === null) caption = "USB-C输入不可读，流带仅示意，外围暂不可分解";
+  else if (!compact && current && current.peripheral_w === null) caption = current.difference_w !== null && current.difference_w < 0 ? "分项差额为负，流带仅示意，外围暂不可分解" : "分项未齐，流带仅示意，外围暂不可分解";
+  else if (!compact && batteryAssist) caption = "电池补充供电，流带仅示意；外围为差额估算";
   return <figure className={`pt-flow-chart${compact ? " pt-flow-mini" : ""}`} style={{ margin: 0 }}>
     <style>{`
       .pt-flow-chart { width: 100%; min-width: 0; box-sizing: border-box; flex-shrink: 0; --pt-flow-surface: color-mix(in srgb, currentColor 6%, transparent); --pt-flow-muted: color-mix(in srgb, currentColor 72%, transparent); }
@@ -108,7 +108,7 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
         <text x={compact ? endX - 2 : 660} y={b.center + (compact ? 9 : 16)} fontSize={compact ? 11 : 24} fontWeight="600" fill={flowColor(b.value)}>{flowWatts(b.value, b.kind === "battery")}</text>
       </g>)}
     </svg>
-    <figcaption>{caption}</figcaption>
+    {caption && <figcaption>{caption}</figcaption>}
   </figure>;
 }
 

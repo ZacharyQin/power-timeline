@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -60,7 +61,14 @@ class Plugin:
                 estimates = {}
                 if previous is not None and discontinuity(previous, sample) is None:
                     estimates = self._attribution.between(previous, sample, previous_games, games)
-                self._recorder.ingest(sample, games, estimates)
+                try:
+                    self._recorder.ingest(sample, games, estimates)
+                except sqlite3.OperationalError as exc:
+                    if exc.sqlite_errorcode != sqlite3.SQLITE_BUSY and "locked" not in str(exc).lower():
+                        raise
+                    decky.logger.warning("Power Timeline sample skipped; database is locked")
+                    await asyncio.sleep(max(0.05, 1.0 - (time.monotonic() - began)))
+                    continue
                 self._flow_snapshot = flow
                 previous, previous_games = sample, games
                 try:
@@ -99,15 +107,15 @@ class Plugin:
             result["error"] = self._failure
         return result
 
-    async def get_power_info(self):
+    async def get_power_info(self, refresh_contract=True):
         recorder = await self._require_recorder()
-        result = await self._power_info.read()
+        result = await self._power_info.read(refresh_contract)
         result["last_charge"] = recorder.charging.status(time.time(), result["battery"]["state"], recorder.status == "recording")
         return result
 
-    async def get_timeline(self, start, end, max_points=600):
+    async def get_timeline(self, start, end, max_points=600, bucket_seconds=None):
         recorder = await self._require_recorder()
-        return recorder.timeline(start, end, max_points)
+        return recorder.timeline(start, end, max_points, bucket_seconds)
 
     async def get_game_history(self, game_id=None, start=None, end=None,
                                metric="system", sort="recent", offset=0, limit=50):

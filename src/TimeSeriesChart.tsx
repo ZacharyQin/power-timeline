@@ -1,5 +1,5 @@
-import { DialogButtonSecondary, Focusable, SliderField } from "@decky/ui";
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { DialogButtonSecondary, Focusable, GamepadButton } from "@decky/ui";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FaClock, FaInfoCircle } from "react-icons/fa";
 import { IconLabel, PowerScaleLegend, Reading, Restrictions, SemanticText, SemanticValue, batteryStateText, durationText, reasonText, supplyText, timeText } from "./components";
 import { PageReading } from "./FullPage";
@@ -10,6 +10,67 @@ import type { SeriesKey } from "./displaySemantics";
 import { getGameIntervals, isSleepEvent, timelineEventLabel } from "./timelineEvents";
 import type { SleepEvent } from "./timelineEvents";
 import type { GameTimelineEvent, Sample, Timeline } from "./types";
+
+function padTime(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function axisTicks(start: number, end: number, left: number, right: number, at: (timestamp: number) => number) {
+  const hours = Math.max(1, end - start) / 3600;
+  const width = Math.max(1, right - left);
+  const dayScale = hours > 36;
+  const step = hours <= 3 ? 1800 : hours <= 36 ? 3600 : hours <= 96 ? 6 * 3600 : 12 * 3600;
+  const perHour = width / hours;
+  const labelEvery = !dayScale && step === 3600 ? perHour >= 56 ? 1 : perHour >= 28 ? 2 : perHour >= 18 ? 3 : 4 : 1;
+  const origin = new Date(start * 1000);
+  origin.setSeconds(0, 0);
+  if (step >= 12 * 3600) origin.setHours(origin.getHours() < 12 ? 0 : 12, 0, 0, 0);
+  else if (step >= 6 * 3600) origin.setHours(Math.floor(origin.getHours() / 6) * 6, 0, 0, 0);
+  else if (step >= 3600) origin.setMinutes(0, 0, 0);
+  else origin.setMinutes(Math.floor(origin.getMinutes() / 30) * 30, 0, 0);
+  let timestamp = origin.getTime() / 1000;
+  if (timestamp < start) timestamp += step;
+  const ticks: { timestamp: number; label: string | null; anchor: "start" | "middle" | "end" }[] = [];
+  let previousLabel = -Infinity;
+  for (; timestamp <= end; timestamp += step) {
+    const position = at(timestamp);
+    if (position < left - 1 || position > right + 1) continue;
+    const date = new Date(timestamp * 1000);
+    const midnight = date.getHours() === 0 && date.getMinutes() === 0;
+    const showLabel = dayScale ? midnight : date.getMinutes() === 0 && date.getHours() % labelEvery === 0;
+    const text = midnight && dayScale ? `${date.getMonth() + 1}/${date.getDate()}` : `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
+    const label = showLabel && position - previousLabel >= 52 && right - position >= 18 ? text : null;
+    if (label) previousLabel = position;
+    ticks.push({ timestamp, label, anchor: position < left + 28 ? "start" : position > right - 28 ? "end" : "middle" });
+  }
+  return ticks;
+}
+
+function smoothLine(points: { x: number; y: number }[]): string {
+  const count = points.length;
+  const slope = new Array<number>(count);
+  const delta = new Array<number>(count - 1);
+  for (let index = 0; index < count - 1; index += 1) {
+    const span = points[index + 1].x - points[index].x;
+    delta[index] = span === 0 ? 0 : (points[index + 1].y - points[index].y) / span;
+  }
+  slope[0] = delta[0];
+  slope[count - 1] = delta[count - 2];
+  for (let index = 1; index < count - 1; index += 1) slope[index] = delta[index - 1] * delta[index] <= 0 ? 0 : (delta[index - 1] + delta[index]) / 2;
+  for (let index = 0; index < count - 1; index += 1) {
+    if (delta[index] === 0) { slope[index] = 0; slope[index + 1] = 0; continue; }
+    const left = slope[index] / delta[index];
+    const right = slope[index + 1] / delta[index];
+    const scale = left * left + right * right;
+    if (scale > 9) { const limit = 3 / Math.sqrt(scale); slope[index] = limit * left * delta[index]; slope[index + 1] = limit * right * delta[index]; }
+  }
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 0; index < count - 1; index += 1) {
+    const span = points[index + 1].x - points[index].x;
+    path += ` C ${points[index].x + span / 3} ${points[index].y + slope[index] * span / 3} ${points[index + 1].x - span / 3} ${points[index + 1].y - slope[index + 1] * span / 3} ${points[index + 1].x} ${points[index + 1].y}`;
+  }
+  return path;
+}
 
 function SeriesLabel({ seriesKey }: { seriesKey: SeriesKey }) {
   const item = chartSeries[seriesKey];
@@ -39,18 +100,20 @@ function ChartGuide({ hardware, games, sleep, gaps }: { hardware: boolean; games
       {games && <p>游戏底色只标记进程观测区间，不代表前台独占或游戏整机耗电；颜色配合图标和名称识别。</p>}
       {sleep && <p>休眠底色与虚线仅连接真实端点，不生成期间样本、读数或能量。</p>}
       {gaps && <p>其他记录缺口保持断线，不补采样或能量。</p>}
-      <p>曲线间的圆点标记事件；游标仅选择真实样本。</p>
+      <p>曲线间的圆点标记事件；左右或触摸只选择真实样本。</p>
     </div>}
   </Focusable>;
 }
 
-export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, compact = false, showGames = false }: {
+export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, compact = false, showGames = false, onOpen, preferredFocus = false }: {
   timeline: Timeline;
   cursor?: number | null;
   onCursor?: (timestamp: number) => void;
   hardware?: boolean;
   compact?: boolean;
   showGames?: boolean;
+  onOpen?: () => void;
+  preferredFocus?: boolean;
 }) {
   const series = useMemo(() => hardware ? [chartSeries.system_w, ...hardwareSeries] : [chartSeries.system_w], [hardware]);
   const { points, start, end } = timeline;
@@ -63,6 +126,17 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
   const gameIntervals = useMemo(() => showGames ? getGameIntervals(timeline) : null, [showGames, timeline.events, start, end]);
   const hasGameIntervals = Boolean(gameIntervals?.spans.length);
   const hasSystemReadings = compact || points.some((point) => point.system_w !== null);
+  const batteryPoints = useMemo(() => points.filter((point) => point.battery_percent !== null), [points]);
+  const [scrub, setScrub] = useState<number | null>(null);
+  const gesture = useRef({ active: false, moved: false, startX: 0, hover: false });
+  useEffect(() => { setScrub(null); }, [start, end]);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || !compact) return;
+    const blockScroll = (event: TouchEvent) => { if (gesture.current.moved) event.preventDefault(); };
+    svg.addEventListener("touchmove", blockScroll, { passive: false });
+    return () => svg.removeEventListener("touchmove", blockScroll);
+  }, [compact, hasPoints, hasSleep, hasGameIntervals]);
   useLayoutEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
@@ -120,30 +194,40 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       {sleep && to - from >= 40 && <text x={(from + to) / 2} y={labelY} textAnchor="middle" fill="currentColor" fontSize="14" aria-hidden="true">休眠</text>}
     </g>;
   });
-  const plot = (key: SeriesKey, top: number, bottom: number, maximum: number) => {
+  const plot = (key: SeriesKey, top: number, bottom: number, maximum: number, smooth = false) => {
     const item = chartSeries[key];
     const paths: string[] = [];
     const dots: { x: number; y: number }[] = [];
     let path = "";
+    let segment: { x: number; y: number }[] = [];
     let previous: Sample | null = null;
+    const finish = () => {
+      if (smooth && segment.length > 2) paths.push(smoothLine(segment));
+      else if (path) paths.push(path);
+      path = "";
+      segment = [];
+    };
     for (const point of points) {
       const value = point[key];
       if (value === null) {
-        if (path) paths.push(path);
-        path = "";
+        finish();
         previous = null;
         continue;
       }
       const px = x(point.timestamp);
       const py = bottom - Math.min(maximum, Math.max(0, value)) / maximum * (bottom - top);
       if (!previous || previous.segment !== point.segment || point.break_reason !== null) {
-        if (path) paths.push(path);
+        finish();
         path = `M ${px} ${py}`;
-        dots.push({ x: px, y: py });
-      } else path += ` L ${px} ${py}`;
+        segment = [{ x: px, y: py }];
+        if (!smooth) dots.push({ x: px, y: py });
+      } else {
+        path += ` L ${px} ${py}`;
+        segment.push({ x: px, y: py });
+      }
       previous = point;
     }
-    if (path) paths.push(path);
+    finish();
     return <g key={key} color={semanticColors[item.role]}>
       <svg x={left} y={top} width={right - left} height={bottom - top} viewBox={`${left} ${top} ${right - left} ${bottom - top}`} overflow="hidden">
         {sleeps.map((event, index) => {
@@ -166,14 +250,94 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
     </g>;
   };
   if (!hasPoints && !hasSleep && !hasGameIntervals) return compact ? <Reading icon={FaClock} label="此范围尚无样本" description="初次启用只记录之后的数据；缺失区间不补算。" /> : <PageReading label="此范围尚无样本" description="初次启用只记录之后的数据；缺失区间不补算。" />;
-  if (compact) return <svg ref={svgRef} role="img" aria-label={`最近三十分钟电池百分比；休眠背景标注休眠，虚线仅连接真实端点；其他缺口断线；不补样本、不补算能量${!hasPoints ? "；休眠期间无采样" : ""}`} viewBox={`0 0 ${plotWidth} 112`} style={{ width: "100%", height: 112, minHeight: 112, flexShrink: 0, display: "block" }}>
-    <title>电池百分比 · 最近三十分钟 · 休眠虚线仅连接真实端点，其他缺口不连接</title>
-    <desc>休眠背景的时间和时长见区间提示；虚线是前后真实端点的视觉连接，不代表休眠期间的实测或估算值，不提供插值读数，不补算能量。</desc>
-    <text x="0" y="20" fill="currentColor" fontSize="14">100%</text><text x="0" y="92" fill="currentColor" fontSize="14">0%</text>
-    {[20, 92].map((y) => <line key={y} x1={left} y1={y} x2={right} y2={y} stroke="currentColor" opacity="0.15" />)}
-    {gapBackgrounds(20, 92, 108)}
-    {plot("battery_percent", 20, 92, 100)}
-  </svg>;
+  if (compact) {
+    const scrubbed = batteryPoints.find((point) => point.timestamp === scrub) ?? null;
+    const scrubX = scrubbed ? x(scrubbed.timestamp) : 0;
+    const scrubY = scrubbed ? 92 - Math.min(100, Math.max(0, scrubbed.battery_percent!)) / 100 * 72 : 0;
+    const labelLeft = scrubX > (left + right) / 2;
+    const clockLabel = (timestamp: number) => {
+      const date = new Date(timestamp * 1000);
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    };
+    const scrubAt = (clientX: number) => {
+      const svg = svgRef.current;
+      if (!svg || batteryPoints.length === 0) return;
+      const bounds = svg.getBoundingClientRect();
+      if (bounds.width <= 0) return;
+      const localX = (clientX - bounds.left) / bounds.width * plotWidth;
+      let nearest = batteryPoints[0];
+      let best = Infinity;
+      for (const point of batteryPoints) {
+        const distance = Math.abs(x(point.timestamp) - localX);
+        if (distance < best) {
+          best = distance;
+          nearest = point;
+        }
+      }
+      setScrub(nearest.timestamp);
+    };
+    const hours: number[] = [];
+    const firstHour = new Date(start * 1000);
+    firstHour.setMinutes(0, 0, 0);
+    if (firstHour.getTime() / 1000 < start) firstHour.setHours(firstHour.getHours() + 1);
+    for (let timestamp = firstHour.getTime() / 1000; timestamp <= end; timestamp += 3600) hours.push(timestamp);
+    const labeled: number[] = [];
+    let previousLabel = -Infinity;
+    for (const timestamp of hours) {
+      const position = x(timestamp);
+      if (position < left + 20 || position > right - 20 || position - previousLabel < 46) continue;
+      labeled.push(timestamp);
+      previousLabel = position;
+    }
+    const chart = <svg ref={svgRef} role="img" aria-label={`最近二十四小时电池百分比；左右或触摸拖动选择样本，点按进入详情；上下切换组件；休眠虚线仅连接真实端点；其他缺口断线；不补样本、不补算能量${!hasPoints ? "；休眠期间无采样" : ""}`} viewBox={`0 0 ${plotWidth} 132`} style={{ width: "100%", height: 132, minHeight: 132, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+      gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }} onPointerMove={(event) => {
+      if (gesture.current.active) {
+        if (Math.abs(event.clientX - gesture.current.startX) >= 10) gesture.current.moved = true;
+        if (!gesture.current.moved) return;
+        gesture.current.hover = false;
+        scrubAt(event.clientX);
+        return;
+      }
+      if (event.pointerType !== "mouse" || event.buttons !== 0) return;
+      gesture.current.hover = true;
+      scrubAt(event.clientX);
+    }} onPointerUp={(event) => {
+      gesture.current.active = false;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    }} onClick={(event) => { if (!gesture.current.moved) return; event.preventDefault(); event.stopPropagation(); }} onPointerCancel={() => { gesture.current.active = false; }} onPointerLeave={() => { if (gesture.current.hover && !gesture.current.active) { gesture.current.hover = false; setScrub(null); } }}>
+      <title>电池百分比 · 最近二十四小时</title>
+      <text x="0" y="20" fill="#fff" fontSize="14">100%</text><text x="0" y="92" fill="#fff" fontSize="14">0%</text>
+      {[20, 92].map((y) => <line key={y} x1={left} y1={y} x2={right} y2={y} stroke="#fff" opacity="0.15" />)}
+      {gapBackgrounds(20, 92, 108)}
+      {plot("battery_percent", 20, 92, 100, true)}
+      <g fill="#fff" fontSize="11">
+        {hours.map((timestamp) => <line key={timestamp} x1={x(timestamp)} x2={x(timestamp)} y1="92" y2="98" stroke="#fff" strokeOpacity="0.45" />)}
+        {labeled.map((timestamp) => <text key={timestamp} x={x(timestamp)} y="114" textAnchor="middle">{clockLabel(timestamp)}</text>)}
+      </g>
+      {scrubbed && <g>
+        <line x1={scrubX} y1="20" x2={scrubX} y2="92" stroke="#fff" strokeOpacity="0.35" />
+        <circle cx={scrubX} cy={scrubY} r="3.5" fill="#fff" />
+        <text x={labelLeft ? scrubX - 8 : scrubX + 8} y={Math.max(32, scrubY - 8)} textAnchor={labelLeft ? "end" : "start"} fill="#fff" fontSize="13" fontWeight="600">{`${Math.round(scrubbed.battery_percent!)}%`}</text>
+        <text x={labelLeft ? scrubX - 8 : scrubX + 8} y={Math.max(46, scrubY + 8)} textAnchor={labelLeft ? "end" : "start"} fill="#fff" fontSize="11">{clockLabel(scrubbed.timestamp)}</text>
+      </g>}
+    </svg>;
+    if (!onOpen) return chart;
+    return <Focusable className="pt-qam-chart" onActivate={() => { if (gesture.current.moved) { gesture.current.moved = false; return; } onOpen(); }} onOKButton={() => { gesture.current.moved = false; onOpen(); }} onOKActionDescription="查看电池时间线" onGamepadBlur={() => { window.setTimeout(() => setScrub(null), 0); }} onGamepadDirection={(event) => {
+      const button = event.detail.button;
+      if (button !== GamepadButton.DIR_LEFT && button !== GamepadButton.DIR_RIGHT || batteryPoints.length === 0) return false;
+      gesture.current.hover = false;
+      setScrub((current) => {
+        const middle = Math.floor((batteryPoints.length - 1) / 2);
+        if (current === null) return batteryPoints[middle].timestamp;
+        const index = batteryPoints.findIndex((point) => point.timestamp === current);
+        const step = button === GamepadButton.DIR_LEFT ? -1 : 1;
+        return batteryPoints[Math.max(0, Math.min(batteryPoints.length - 1, (index < 0 ? middle : index) + step))].timestamp;
+      });
+      return undefined;
+    }}>{chart}</Focusable>;
+  }
   return <>
     <style>{`
       .pt-fullpage .pt-chart-values { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; }
@@ -190,8 +354,40 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       .pt-fullpage .pt-chart-auxiliary > .pt-chart-guide { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--pt-border); }
       .pt-fullpage .pt-chart-guide-body { margin-top: 8px; padding-left: 12px; border-left: 1px solid var(--pt-border); }
       .pt-fullpage .pt-chart-guide-body p { display: block; margin: 6px 0; font-size: 13px; line-height: 18px; }
+      .pt-timeline-chart { display: block; width: 100%; }
+      .pt-timeline-chart.gpfocus, .pt-timeline-chart.gpfocuswithin, .pt-timeline-chart:focus-visible { background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); outline: none; }
     `}</style>
-    <svg ref={svgRef} role="img" aria-label={`同时间轴电池百分比和功率；电池与瓦特分别标轴；${showGames ? "游戏底色为实际观测区间；" : ""}休眠虚线仅连接真实端点，其他缺口断线；不补样本、不补算能量${!hasPoints ? "；此范围无采样" : ""}`} viewBox={`0 0 ${plotWidth} 360`} style={{ width: "100%", height: 360, minHeight: 360, flexShrink: 0, display: "block" }}>
+    {/* @ts-expect-error Steam 的空容器必须带 focusableIfEmpty，否则手柄焦点树会跳过只含 SVG 的图。 */}
+    <Focusable noFocusRing focusableIfEmpty className="pt-timeline-chart" preferredFocus={preferredFocus} onOKActionDescription="左右选择样本" onGamepadDirection={(event) => {
+      const button = event.detail.button;
+      if (!onCursor || (button !== GamepadButton.DIR_LEFT && button !== GamepadButton.DIR_RIGHT) || points.length === 0) return false;
+      const current = cursor ?? points[points.length - 1].timestamp;
+      let index = 0;
+      for (let i = 1; i < points.length; i += 1) if (Math.abs(points[i].timestamp - current) < Math.abs(points[index].timestamp - current)) index = i;
+      const next = points[Math.max(0, Math.min(points.length - 1, index + (button === GamepadButton.DIR_LEFT ? -1 : 1)))];
+      onCursor(next.timestamp);
+      return true;
+    }}><svg ref={svgRef} role="img" aria-label={`同时间轴电池百分比和功率；左右或触摸拖动选择真实样本；电池与瓦特分别标轴；${showGames ? "游戏底色为实际观测区间；" : ""}休眠虚线仅连接真实端点，其他缺口断线；不补样本、不补算能量${!hasPoints ? "；此范围无采样" : ""}`} viewBox={`0 0 ${plotWidth} 360`} style={{ width: "100%", height: 360, minHeight: 360, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+      gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }} onPointerMove={(event) => {
+      if (!gesture.current.active || !onCursor) return;
+      if (Math.abs(event.clientX - gesture.current.startX) >= 10) gesture.current.moved = true;
+      if (!gesture.current.moved) return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (bounds.width <= 0 || points.length === 0) return;
+      const localX = (event.clientX - bounds.left) / bounds.width * plotWidth;
+      let nearest = points[0];
+      let best = Infinity;
+      for (const point of points) {
+        const distance = Math.abs(x(point.timestamp) - localX);
+        if (distance < best) { best = distance; nearest = point; }
+      }
+      onCursor(nearest.timestamp);
+    }} onPointerUp={(event) => {
+      gesture.current.active = false;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    }} onClick={(event) => { if (!gesture.current.moved) return; event.preventDefault(); event.stopPropagation(); }} onPointerCancel={() => { gesture.current.active = false; }}>
       <title>电池 % 与功率 W；共用时间轴；休眠虚线仅连接真实端点，其他缺口不连接</title>
       <desc>休眠背景的时间和时长见区间提示；虚线仅连接前后真实端点，不是休眠期间的实测或估算值。游标只选择实际样本，其他缺口保持断线，不补样本、不补算能量。</desc>
       {gameIntervals?.spans.map(({ event, from, to, lane, game }) => {
@@ -210,7 +406,13 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       <g fill="currentColor" fontSize="14">
         <text x="0" y="18">电池 %</text><text x="14" y="39">100</text><text x="25" y="94">50</text><text x="33" y="149">0</text>
         <text x="0" y="186">功率 W</text><text x="12" y="207">{maxW}</text><text x="12" y="262">{maxW / 2}</text><text x="33" y="317">0</text>
-        <text x={left} y="351">{timeText(start)}</text><text x={(left + right) / 2} y="351" textAnchor="middle">{timeText(start + span / 2)}</text><text x={right} y="351" textAnchor="end">{timeText(end)}</text>
+        {axisTicks(start, end, left, right, x).map((tick) => {
+          const position = x(tick.timestamp);
+          return <g key={tick.timestamp}>
+            <line x1={position} x2={position} y1="323" y2={tick.label ? "334" : "329"} stroke="currentColor" strokeOpacity={tick.label ? 0.5 : 0.28} />
+            {tick.label && <text x={position} y="349" textAnchor={tick.anchor} fontSize="12">{tick.label}</text>}
+          </g>;
+        })}
       </g>
       {[35, 90, 145, 203, 258, 313].map((y) => <line key={y} x1={left} y1={y} x2={right} y2={y} stroke="currentColor" opacity="0.15" />)}
       {gapBackgrounds(25, 323, 162)}
@@ -218,8 +420,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       {series.map((item) => plot(item.key, 203, 313, maxW))}
       {selected && markerTime >= start && markerTime <= end && <line x1={x(markerTime)} y1="25" x2={x(markerTime)} y2="323" stroke="currentColor" strokeDasharray="2 3" />}
       {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 162 : showGames ? 193 : 175} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${event.label}`}</title></circle>)}
-    </svg>
-    {(onCursor || !hasPoints) && <SliderField className={`pt-chart-cursor${points.length < 2 ? " pt-semantic-disabled" : ""}`} label="样本游标" value={selectedIndex} min={0} max={Math.max(1, points.length - 1)} step={1} minimumDpadGranularity={1} showValue={false} disabled={points.length < 2} onChange={(index) => { const point = points[Math.round(index)]; if (point) onCursor?.(point.timestamp); }} />}
+    </svg></Focusable>
     <section className="pt-chart-auxiliary" aria-label="样本读数与图例">
       <div className="pt-chart-readout" aria-live="polite">
         <div className="pt-chart-context">

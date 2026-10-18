@@ -25,13 +25,17 @@ interface ViewState {
 }
 
 export function rangeBounds(range: Range, now = Date.now() / 1000) {
-  const midnight = new Date(now * 1000);
-  midnight.setHours(0, 0, 0, 0);
-  return { start: range === "today" ? midnight.getTime() / 1000 : now - (range === "30m" ? 1800 : 21600), end: now };
+  const days = range === "7d" ? 7 : range === "3d" ? 3 : 1;
+  return { start: now - days * 86400, end: now };
+}
+
+export function rangeBucket(range: Range) {
+  const days = range === "7d" ? 7 : range === "3d" ? 3 : 1;
+  return days * 300;
 }
 
 let state: ViewState = {
-  page: "timeline", range: "30m", bounds: rangeBounds("30m"), live: true,
+  page: "timeline", range: "1d", bounds: rangeBounds("1d"), live: true,
   cursor: null, detailCursors: {}, hardware: false, metric: "system", sort: "recent",
   gameId: null, gameName: "", sessionId: null, detailOrigin: "timeline", helpOrigin: "timeline",
   event: null, focus: "range", gamesOffset: 0, sessionsOffset: 0,
@@ -65,9 +69,5 @@ export function backPage() {
     updateView({ page: "games", focus: `game:${current.gameId}` });
   } else if (current.page === "games") {
     updateView({ page: "timeline", focus: "games" });
-  } else if (current.page === "power") {
-    updateView({ page: "timeline", focus: "power" });
-  } else if (current.page === "flow") {
-    updateView({ page: "timeline", focus: "flow" });
   }
 }

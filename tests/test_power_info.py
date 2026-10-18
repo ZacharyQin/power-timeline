@@ -143,17 +143,26 @@ class ChargeHistoryTests(unittest.TestCase):
         self.assertIsNone(self.status(1004)["elapsed_seconds"])
         self.assertIsNone(self.status(1004)["ended_at"])
 
-    def test_gap_preserves_observed_datetime_but_invalidates_last_charge_duration(self):
+    def test_sampling_gap_after_confirmed_end_keeps_elapsed(self):
         self.ingest(0, "Charging")
         self.ingest(1, "Full")
         self.ingest(10, "Discharging", "battery")
         result = self.status(1011)
         self.assertEqual(result["ended_at"], 1001)
-        self.assertIsNone(result["elapsed_seconds"])
-        self.assertEqual(result["reason"], "sampling_gap")
+        self.assertEqual(result["elapsed_seconds"], 10)
+        self.assertIsNone(result["reason"])
         self.ingest(11, "Charging")
         self.ingest(12, "Not charging")
         self.assertEqual(self.status(1013, "Not charging")["elapsed_seconds"], 1)
+
+    def test_suspend_after_confirmed_end_still_hides_elapsed(self):
+        self.ingest(0, "Charging")
+        self.ingest(1, "Full")
+        self.ingest(2, "Discharging", "battery", boottime=132)
+        result = self.status(1003)
+        self.assertEqual(result["ended_at"], 1001)
+        self.assertIsNone(result["elapsed_seconds"])
+        self.assertEqual(result["reason"], "suspend")
 
     def test_gap_during_charge_cannot_invent_an_end(self):
         self.ingest(0, "Charging")

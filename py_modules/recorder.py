@@ -36,6 +36,29 @@ def validate_points(max_points):
     if isinstance(max_points, bool) or not isinstance(max_points, int) or not 2 <= max_points <= 10000:
         raise ValueError("max_points must be an integer between 2 and 10000")
 
+def bucket_series(points, start, bucket_seconds):
+    """One retained sample per bucket. Empty buckets and breaks stay disconnected."""
+    result, segment, last_bucket, last_source, held = [], 0, None, None, None
+    for point in points:
+        bucket = int((point["timestamp"] - start) // bucket_seconds)
+        gap = last_bucket is not None and bucket > last_bucket + 1
+        broken = bool(point.get("break_reason")) or point.get("battery_percent") is None or (
+            last_source is not None and point.get("segment") != last_source)
+        if held is not None and (bucket != last_bucket or gap or broken):
+            result.append(held)
+            held = None
+            if gap or broken:
+                segment += 1
+        if point.get("battery_percent") is not None and not point.get("break_reason"):
+            kept = dict(point)
+            kept["segment"] = segment
+            held = kept
+        last_bucket = bucket
+        last_source = point.get("segment")
+    if held is not None:
+        result.append(held)
+    return result
+
 
 def downsample(read_points, max_points):
     """Bounded streaming selection retains segment breaks, nulls and extrema."""
@@ -121,7 +144,9 @@ class ChargeHistory:
             else:
                 self.reason = gap or "charge_end_unobserved"
         elif self.ended is not None:
-            if gap is not None:
+            # Elapsed is the boottime difference from the observed end, not an integral across samples.
+            # A late sample does not hide that end; suspend and clock jumps still do.
+            if gap not in (None, "sampling_gap"):
                 self.reason = gap
             elif state not in ("full", "not charging", "discharging"):
                 self.reason = "battery_state_unknown"
@@ -361,6 +386,11 @@ class Recorder:
             self.segment, self.latest = segment, wire
             self.revision += 1
             self.charging.observe(sample)
+        except sqlite3.OperationalError as exc:
+            if exc.sqlite_errorcode == sqlite3.SQLITE_BUSY or "locked" in str(exc).lower():
+                raise
+            self._storage_error(exc)
+            raise
         except (sqlite3.Error, StorageFullError) as exc:
             self._storage_error(exc)
             raise
@@ -492,7 +522,7 @@ class Recorder:
                 "sessions": [self._public_session(row) for row in self._sessions(active_only=True)] if self.db is not None and self.status == "recording" else [],
                 "model": MODEL, "storage_bytes": self.storage.size(), "storage_limit_bytes": self.storage.max_bytes}
 
-    def timeline(self, start, end, max_points=600):
+    def timeline(self, start, end, max_points=600, bucket_seconds=None):
         self._require_db()
         self._range(start, end)
         if start is None or end is None:
@@ -503,7 +533,12 @@ class Recorder:
                 "SELECT payload FROM samples WHERE timestamp>=? AND timestamp<=? ORDER BY timestamp,id", (start, end)
             ):
                 yield json.loads(row[0])
-        points = downsample(read_points, max_points)
+        if bucket_seconds is None:
+            points = downsample(read_points, max_points)
+        else:
+            if isinstance(bucket_seconds, bool) or not isinstance(bucket_seconds, int) or bucket_seconds < 60:
+                raise ValueError("bucket_seconds must be an integer of at least 60")
+            points = bucket_series(read_points(), start, bucket_seconds)
         events = []
         # Use ingestion order, not wall-clock ordering, to describe clock jumps honestly.
         for row in self.db.execute(

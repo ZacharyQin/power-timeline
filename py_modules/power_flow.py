@@ -91,16 +91,11 @@ def power_flow(sample, ec, ec_error=None, battery_aligned=True):
             pdv, pdi = ec["pd_voltage"] * .05, ec["pd_current"] * .01
     else:
         errors["input_w"] = "external_supply_unavailable"
-    difference, peripheral = None, None
-    if pin is not None and apu is not None and (mode == "battery" or net is not None):
-        difference = pin - apu - (net if mode == "external" else 0)
-        if not battery_aligned and mode == "external":
-            errors["peripheral_w"] = "battery_window_changed"
-        elif difference < 0:
-            errors["peripheral_w"] = "negative_power_difference"
-        else:
-            peripheral = difference
-    if peripheral is None and "peripheral_w" not in errors:
+    battery_term = net if mode == "external" and net is not None else 0.0
+    difference = peripheral = None
+    if pin is not None and apu is not None:
+        difference = peripheral = pin - apu - battery_term
+    elif "peripheral_w" not in errors:
         errors["peripheral_w"] = "flow_components_unavailable"
     return {
         "timestamp": sample["timestamp"], "mode": mode, "battery_state": state,

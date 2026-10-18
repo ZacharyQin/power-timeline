@@ -29,10 +29,10 @@ function PowerTimelinePage() {
   const visible = useDocumentVisible();
   const summary = useSnapshot(visible);
   const back = () => {
-    if (view.page === "timeline") Navigation.NavigateBack();
+    if (view.page === "timeline" || view.page === "power" || view.page === "flow") Navigation.NavigateBack();
     else backPage();
   };
-  const backLabel = view.page === "help" ? pageLabels[view.helpOrigin] : view.page === "detail" ? (view.detailOrigin === "timeline" ? "电池时间线" : "历次会话") : view.page === "sessions" ? "游戏分组" : view.page === "games" || view.page === "power" || view.page === "flow" ? "电池时间线" : "Steam";
+  const backLabel = view.page === "help" ? pageLabels[view.helpOrigin] : view.page === "detail" ? (view.detailOrigin === "timeline" ? "电池时间线" : "历次会话") : view.page === "sessions" ? "游戏分组" : view.page === "games" ? "电池时间线" : "Steam";
   const pageIcon = view.page === "timeline" ? FaChartLine : view.page === "power" ? FaBatteryHalf : view.page === "flow" ? FaProjectDiagram : view.page === "games" ? FaGamepad : view.page === "sessions" ? FaHistory : view.page === "help" ? FaInfoCircle : FaListUl;
   return <DialogBody className={`pt-fullpage${view.page === "power" ? " pt-power-page" : ""}`} style={{ height: "100%", boxSizing: "border-box", padding: "52px 0" }}>
     <SemanticStyles /><FullPageStyles />
@@ -47,8 +47,6 @@ function PowerTimelinePage() {
             <DialogHeader className="pt-page-heading" style={{ marginBottom: 0, fontSize: 20, lineHeight: "28px" }}><IconLabel icon={pageIcon}>Power Timeline · {pageLabels[view.page]}</IconLabel></DialogHeader>
             <Focusable className="pt-header-actions" flow-children="row">
               {view.page === "timeline" && <Focusable preferredFocus={view.focus === "games"}><DialogButtonSecondary className="pt-compact-button" onClick={() => updateView({ page: "games", live: false, focus: view.gameId ? `game:${view.gameId}` : "history" })}><IconLabel icon={FaGamepad}>游戏记录</IconLabel></DialogButtonSecondary></Focusable>}
-              {view.page === "timeline" && <Focusable preferredFocus={view.focus === "power"}><DialogButtonSecondary className="pt-compact-button" onClick={() => updateView({ page: "power", focus: "back" })}><IconLabel icon={FaBatteryHalf}>电源与电池</IconLabel></DialogButtonSecondary></Focusable>}
-              {view.page === "timeline" && <Focusable preferredFocus={view.focus === "flow"}><DialogButtonSecondary className="pt-compact-button" onClick={() => updateView({ page: "flow", focus: "back" })}><IconLabel icon={FaProjectDiagram}>功率流</IconLabel></DialogButtonSecondary></Focusable>}
               <Focusable preferredFocus={view.focus === "back"}><DialogButtonSecondary className="pt-compact-button" onClick={back}><IconLabel icon={FaChevronLeft}>返回{backLabel}</IconLabel></DialogButtonSecondary></Focusable>
             </Focusable>
           </Focusable>

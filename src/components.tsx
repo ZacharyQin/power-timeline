@@ -116,8 +116,8 @@ export function durationText(seconds: number) {
   const minutes = Math.floor(Math.max(0, seconds) / 60);
   return minutes >= 60 ? `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分` : `${minutes} 分 ${Math.floor(Math.max(0, seconds)) % 60} 秒`;
 }
-export function Reading({ label, children, description, icon: Icon, layout = "inline", padding = "compact", className }: { label: ReactNode; children?: ReactNode; description?: ReactNode; icon?: IconType; layout?: "inline" | "below"; padding?: "none" | "standard" | "compact"; className?: string }) {
-  return <PanelSectionRow><Field className={`pt-semantic-field${className ? ` ${className}` : ""}`} label={label} description={description} icon={Icon && <Icon aria-hidden="true" focusable="false" />} childrenLayout={layout} inlineWrap="shift-children-below" padding={padding} bottomSeparator="none">{children}</Field></PanelSectionRow>;
+export function Reading({ label, children, description, icon: Icon, layout = "inline", padding = "compact", className, onGamepadFocus }: { label: ReactNode; children?: ReactNode; description?: ReactNode; icon?: IconType; layout?: "inline" | "below"; padding?: "none" | "standard" | "compact"; className?: string; onGamepadFocus?: (event: CustomEvent) => void }) {
+  return <PanelSectionRow><Field className={`pt-semantic-field${className ? ` ${className}` : ""}`} label={label} description={description} icon={Icon && <Icon aria-hidden="true" focusable="false" />} childrenLayout={layout} inlineWrap="shift-children-below" padding={padding} bottomSeparator="none" onGamepadFocus={onGamepadFocus}>{children}</Field></PanelSectionRow>;
 }
 export function Action({ children, onClick, preferred = false, description, disabled = false, icon }: { children: ReactNode; onClick: () => void; preferred?: boolean; description?: ReactNode; disabled?: boolean; icon?: IconType }) {
   return <PanelSectionRow><Focusable preferredFocus={preferred}><ButtonItem layout="below" onClick={onClick} description={description} disabled={disabled}>{icon ? <IconLabel icon={icon}>{children}</IconLabel> : children}</ButtonItem></Focusable></PanelSectionRow>;

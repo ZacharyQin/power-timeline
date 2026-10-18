@@ -128,7 +128,7 @@ export interface Detail {
 
 export type Metric = "system" | "process" | "cpu" | "gpu";
 export type Sort = "recent" | "energy" | "power";
-export type Range = "30m" | "6h" | "today";
+export type Range = "1d" | "3d" | "7d";
 
 export interface ChargeEstimate {
   status: "available" | "unknown" | "full" | "not_charging" | "discharging" | "stale";
