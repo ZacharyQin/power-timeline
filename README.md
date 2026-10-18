@@ -1,45 +1,50 @@
 <h1 align="center">Power Timeline</h1>
 
-> 在 Steam Deck 上记录电池、整机功率和游戏能耗，并从 QAM 直接打开时间线、功率流和电源详情。
+> Record battery level, system power, and game energy on a Steam Deck, and open the timeline, power flow, and power details from the Quick Access menu.
 
 <p align="center">
-  <a href="#install">安装</a> · <a href="#try-it">试一试</a> ·
-  <a href="#read-the-numbers">读数</a> · <a href="#controls">操作</a> · <a href="#limitations">限制</a>
+  <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a>
+</p>
+<p align="center">
+  <a href="#install">Install</a> · <a href="#try-it">Try it</a> ·
+  <a href="#read-the-numbers">Numbers</a> · <a href="#controls">Controls</a> · <a href="#limitations">Limitations</a>
 </p>
 
-关掉 QAM 或完整页不会停止记录。后台大约每秒采一次，历史写在本机 SQLite 里。电量、整机功率和游戏进程能耗分开统计：插电时不算整机瓦时，游戏 CPU/GPU 是活动加权估算，不是每进程电表。未知保持未知，不补成 0。
+Closing the Quick Access menu or a full page does not stop recording. The backend samples about once a second and keeps history in a local SQLite database. Battery percentage, whole-system power, and per-game energy stay separate: plugged-in time is not counted as system watt-hours, and game CPU/GPU energy is an activity-weighted estimate, not a per-process meter. Unknown stays unknown. It is not filled in as zero.
 
-已在一台 Steam Deck（Galileo，EC 4352）上用 Decky 核对过 0.2.0 的采集、1/3/7 天时间线、功率流和充电限制开关。其它机型、掌机和 SteamOS 版本未验证。
+0.2.0 recording, the 1/3/7-day timeline, the power-flow page, and the charge-limit switch were checked on one Steam Deck (Galileo, EC 4352) with Decky. Other models, handhelds, and SteamOS versions are unverified.
 
-## 读数
+## Read the numbers
 
-| 数字 | 含义 |
+| Number | Meaning |
 | --- | --- |
-| 电量 % | 电池上报的百分比。变化量是百分点，不能直接换成 Wh |
-| 整机 W / Wh | 只在确认拔掉外接电源且电池放电时，由电流 × 电压积分。包含屏幕和后台 |
-| 硬件域 W | AMDGPU 遥测。APU 不与 CPU、SoC、GPU 分项相加 |
-| 游戏 CPU/GPU Wh | `activity-weighted-v1` 估算。两个域的覆盖可以不同，缺一个就不合成假的平均功率 |
-| 预计充满 | 仅在确实充电、外接供电、UPower 状态匹配且来源不超过 90 秒时显示。会随来源变长或变短，不是本地倒计时 |
-| 距上次充电结束 | 从连续观测到的 Charging → Full／未充电／放电边界起算，不是距上次拔电 |
-| 充电限制 | QAM 开关写入 Steam 的 `steamos_charge_limit_enabled`。停止百分比沿用 Steam 里已保存的值。固件读数为 0 表示不限制，不是 0% 上限 |
-| 功率流 | 放电看电池输出，外接看已核对 EC 的 VBUS × IBUS。外围是差额估算，含通路损耗，不是独立电表 |
+| Battery % | Percentage reported by the battery. A change is in percentage points, not watt-hours |
+| System W / Wh | Integrated from current × voltage only while external power is confirmed offline and the battery is discharging. Includes the screen and background |
+| Hardware W | AMDGPU telemetry. APU is not added to the CPU, SoC, and GPU parts |
+| Game CPU/GPU Wh | `activity-weighted-v1` estimate. The two domains can cover different time, and a missing domain is not zeroed into a fake average |
+| Time to full | Shown only while actually charging on external power, with a matching UPower state no older than 90 seconds. It can go up or down with the source. It is not a local countdown |
+| Since charge ended | Counted from a continuously observed Charging → Full / not charging / discharging boundary. It is not time since unplug |
+| Charge limit | The QAM switch writes Steam's `steamos_charge_limit_enabled`. The stop percentage is the value already saved in Steam settings. A firmware reading of 0 means no limit, not a 0% cap |
+| Power flow | Battery output while discharging, and the checked EC VBUS × IBUS while on external power. Peripheral watts are a remainder estimate, including path loss, not a separate meter |
 
-W 数字另按固定档着色：`0–<5` 蓝、`5–<10` 青蓝、`10–<15` 青绿、`15–<20` 淡金、`≥20` 暖橙。这只表示大小，不是安全或效率评分。Wh 只区分整机实测和进程估算。
+Watt numbers use fixed bands: `0–<5` blue, `5–<10` cyan, `10–<15` teal, `15–<20` pale gold, `≥20` warm orange. The band is magnitude only, not a safety or efficiency score. Watt-hours only distinguish measured system energy from the process estimate.
 
-## 安装
+## Install
 
-需要 SteamOS 上的 Decky Loader。插件声明了官方 `root` 标志，**整个 Python 后端以 root 运行**。EC 读取只接受已核对的 Galileo／F7G0114／board 5／EC 4352；身份不符时相关读数保持未知。不调用 sudo，也不改电源配置或其它插件。
+Decky Loader on SteamOS is required. The plugin sets the official `root` flag, so **the whole Python backend runs as root**. The EC read accepts only the checked Galileo / F7G0114 / board 5 / EC 4352 identity. Other hardware keeps those readings unknown. It does not call sudo, and it does not change power settings or other plugins.
 
-### 从本地安装包
+### From a local package
 
-构建产物是 [dist/power-timeline-0.2.0.zip](dist/power-timeline-0.2.0.zip)。用 Decky 的本地 ZIP 安装。包内根目录为 `power-timeline/`，含 `plugin.json`、`package.json`、`main.py`、`LICENSE`、`README.md`、`dist/index.js` 和 `py_modules/*.py`。不含测试、开发依赖或数据库。
+The build output is [dist/power-timeline-0.2.0.zip](dist/power-timeline-0.2.0.zip). Install that ZIP through Decky. The archive root is `power-timeline/`, containing `plugin.json`, `package.json`, `main.py`, `LICENSE`, `README.md`, `README.zh-CN.md`, `dist/index.js`, and `py_modules/*.py`. Tests, development dependencies, and the database are not included.
 
-安装后在 Decky 里应能看到 **Power Timeline**。稳定目录名是 `power-timeline`。
+After installation, Decky should list **Power Timeline**. The stable directory name is `power-timeline`.
+
+GitHub Actions builds this ZIP on every push and pull request. Download it from the workflow artifacts.
 
 <details>
-<summary>从源码构建</summary>
+<summary>Build from source</summary>
 
-需要 Node.js、pnpm 和 Python 3。后端只用标准库。
+Node.js, pnpm, and Python 3 are required. The backend uses the standard library only.
 
 ```sh
 pnpm install --registry=https://registry.npmjs.org
@@ -48,61 +53,61 @@ pnpm build
 python3 -m unittest discover -s tests -v
 ```
 
-`pnpm build` 生成前端 `dist/index.js`。再把上面列出的运行文件打进 ZIP 后安装。不要把数据库放进插件目录。
+`pnpm build` writes `dist/index.js`. Pack the runtime files listed above into the ZIP, then install it. Do not put the database inside the plugin directory.
 
 </details>
 
-## 试一试
+## Try it
 
-1. 打开 Decky → **Power Timeline**。QAM 里先看电量和功率流小图。
-2. 聚焦 24 小时电量图后按确认，进入电池时间线。用 **最近 1 天 / 3 天 / 7 天** 切换范围。
-3. 手柄下到图上，左右选择样本；也可以横向拖动。读数在图下，精确到该样本。选中历史点后范围固定，再点一次对应的天数页签会回到该范围的最新记录。
-4. 充电时，QAM 的「预计充满」给出系统估计；「充电限制」沿用 Steam 电源设置里的百分比。
-5. 聚焦功率流后按确认进入功率流内页。聚焦电池信息与电源参数后按确认进入电源与电池。
+1. Open Decky → **Power Timeline**. In the Quick Access menu, look at the battery level and the small power-flow diagram.
+2. Focus the 24-hour battery chart and press confirm to open the battery timeline. Switch **Last 1 day / 3 days / 7 days**.
+3. Move down onto the chart. Left and right select samples; a horizontal drag does the same. The reading under the chart is that sample. After a historical point is selected, the range stays fixed. Press the same day tab again to return to the latest samples in that range.
+4. While charging, the Quick Access **time to full** shows the system estimate. **Charge limit** uses the percentage already stored in Steam's power settings.
+5. Focus the power-flow diagram and press confirm for the power-flow page. Focus the battery and power facts and press confirm for power and battery.
 
-首次启用没有更早的历史，不会反推启用前的耗电。已经在跑的游戏标成中途开始观测。
+The first launch has no earlier history and does not invent energy from before it was enabled. A game that is already running is marked as observed mid-run.
 
-## 操作
+## Controls
 
-QAM：
+Quick Access:
 
-- **24 小时图**：左右或触摸选择电量点，确认进入电池时间线。
-- **功率流**：确认进入功率流内页。
-- **预计充满**：沙漏图标。数字是系统估计，单位单独排开。
-- **充电限制**：开关 Steam 已有的充电限制，不另写一份 sysfs。
-- **电池信息与电源参数**：确认进入电源与电池。
+- **24-hour chart**: select a battery point with left/right or touch, then confirm to open the battery timeline.
+- **Power flow**: confirm to open the power-flow page.
+- **Time to full**: hourglass icon. The number is the system estimate, with the unit set apart.
+- **Charge limit**: toggles the charge limit Steam already has. It does not write a second sysfs value.
+- **Battery and power facts**: confirm to open power and battery.
 
-完整页：
+Full pages:
 
-- **电池时间线**、**功率流**、**电源与电池** 是平级页面。返回都回到 Steam，不经过另一内页。
-- 时间线用页签切换 1／3／7 天。图按时间桶聚类：1 天 300 秒、3 天 900 秒、7 天 2100 秒，只保留有样本的桶。1 天的横轴按小时分段、标到分钟；3 天和 7 天按天标日期，中间保留 6 小时或 12 小时刻度。
-- 硬件功耗域可展开 APU、CPU、SoC、GPU。游戏区间用淡色背景标识，短区间在图下图例里看。
-- 页尾「统计说明」集中放统计规则。返回保留原来的页面、范围和选中点。
+- **Battery timeline**, **power flow**, and **power and battery** are sibling pages. Back returns to Steam, not to another plugin page.
+- The timeline uses tabs for 1/3/7 days. Points are clustered in time buckets: 300 seconds for 1 day, 900 for 3 days, and 2100 for 7 days. Only buckets that contain a sample are kept. A 1-day axis is marked in hours, to the minute. A 3-day or 7-day axis is marked by date, with 6-hour or 12-hour ticks between dates.
+- Hardware domains can show APU, CPU, SoC, and GPU. Game intervals use a pale background; short intervals are identified in the legend under the chart.
+- **Statistics** at the bottom collects the counting rules. Going back keeps the page, range, and selected point.
 
-## 更新或卸载
+## Update or uninstall
 
-更新时重新安装新的 ZIP，或替换 `~/homebrew/plugins/power-timeline` 后让 Decky 重载插件。重载会中断当前会话并开始新的观测；未提交的最后一拍不补算。
+Install a new ZIP, or replace `~/homebrew/plugins/power-timeline` and reload the plugin in Decky. A reload ends the current session and starts a new observation. A sample that was not committed is not reconstructed.
 
-卸载或禁用前先停掉插件，再备份数据目录。数据库在 Loader 的 `DECKY_PLUGIN_RUNTIME_DIR`，通常是 `~/homebrew/data/power-timeline/`。不要在采集进程仍持有锁时删除数据库。卸载插件不会自动删除历史。
+Stop the plugin before uninstalling or disabling it, then back up the data directory. The database lives in Loader's `DECKY_PLUGIN_RUNTIME_DIR`, usually `~/homebrew/data/power-timeline/`. Do not delete the database while the recorder still holds its lock. Uninstalling the plugin does not delete history.
 
-## 限制
+## Limitations
 
-- 整机功率只在确认的电池放电上计算。外接供电时整机项是未知，不能把电池净充电功率当成整机输入。
-- 外围瓦数是差额估算，不是独立电表。PD 电压 × 电流只是协商上限。
-- 游戏 CPU/GPU 能量不是内核每 PID 电能。并行游戏不会各自复制一整份整机能耗。
-- 距上次充电结束在休眠、时钟跳变或未知电池状态后只保留结束日期，不报经过时长。采样晚到本身不会抹掉这个时长。
-- 时间线为了能画出来做了分桶，不是每一秒一个点。会话详情仍按原始边界降采样；边界点超过上限时，该查询会拒绝而不是编造曲线。
-- 充电限制只切换 Steam 设置里的开关，百分比仍在 Steam 的电源设置中修改。
-- EC 输入只支持已核对的那一版硬件。其它机型保持未知。
-- 物理小屏、完整休眠矩阵、长期自耗电和估算绝对精度没有在本说明里当成已通过。
+- System power is computed only during confirmed battery discharge. While external power is connected, system power is unknown. Battery net charge power is not system input.
+- Peripheral watts are a remainder estimate, not a separate meter. PD voltage × current is only the negotiated limit.
+- Game CPU/GPU energy is not a kernel per-PID energy counter. Parallel games do not each receive a full copy of system energy.
+- After sleep, a clock jump, or an unknown battery state, time since charge ended keeps the end date and does not report elapsed time. A late sample by itself does not erase that elapsed time.
+- The timeline is bucketed so it can be drawn. It is not one point per second. Session detail still downsamples on raw boundaries. If those boundary points exceed the cap, that query is rejected instead of inventing a curve.
+- The charge-limit control only toggles the switch in Steam settings. The percentage is still edited in Steam's power settings.
+- EC input supports only the checked hardware revision. Other models stay unknown.
+- A physical small screen, a full sleep matrix, long-term self consumption, and absolute estimate accuracy are not claimed here.
 
-## 隐私
+## Privacy
 
-记录留在本机：样本、会话和游戏名写入上面的 SQLite。插件读取电池、AMDGPU 遥测，以及白名单 EC 窗口；EC 映射是只读的 4KB。充电限制通过 Steam 客户端设置写入，不改系统电源策略文件。没有网络请求，也不上传采样。
+Records stay on the device. Samples, sessions, and game names are written to the SQLite database above. The plugin reads the battery, AMDGPU telemetry, and a whitelisted EC window. The EC mapping is a read-only 4 KB view. The charge limit is written through Steam client settings, not by editing system power-policy files. It makes no network requests and does not upload samples.
 
-## 开发
+## Development
 
-基于 [Decky 插件模板](https://github.com/SteamDeckHomebrew/decky-plugin-template)。界面是 TypeScript／React，后端是 Python 标准库。
+Based on the [Decky plugin template](https://github.com/SteamDeckHomebrew/decky-plugin-template). The interface is TypeScript and React. The backend is the Python standard library.
 
 ```sh
 pnpm install --registry=https://registry.npmjs.org
@@ -111,8 +116,8 @@ pnpm build
 python3 -m unittest discover -s tests -v
 ```
 
-更细的实现记录和未验证项在 [HANDOFF.md](HANDOFF.md)。`design/` 里的 HTML 只是早期对照，不是运行中的插件。
+HTML under `design/` is an early mock, not the running plugin.
 
-## 许可证
+## License
 
-[BSD 3-Clause](./LICENSE)。Copyright (c) 2026, Zachary。这是独立插件，不是 Valve、SteamOS 或 Decky 的官方项目。
+[BSD 3-Clause](./LICENSE). Copyright (c) 2026, Zachary. This is an independent plugin, not an official Valve, SteamOS, or Decky project.

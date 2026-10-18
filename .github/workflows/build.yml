@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: python3 -m unittest discover -s tests -v
+      - name: Package plugin ZIP
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          root = Path(".")
+          package = root / "dist/power-timeline-0.2.0.zip"
+          members = [root / name for name in (
+              "plugin.json", "package.json", "main.py", "LICENSE",
+              "README.md", "README.zh-CN.md", "dist/index.js")]
+          members += sorted((root / "py_modules").glob("*.py"))
+          with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
+              for path in members:
+                  archive.write(path, "power-timeline/" + path.relative_to(root).as_posix())
+          print(package, package.stat().st_size)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: power-timeline-0.2.0
+          path: dist/power-timeline-0.2.0.zip
+          if-no-files-found: error
