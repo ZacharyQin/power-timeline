@@ -1,8 +1,10 @@
 <h1 align="center">Power Timeline</h1>
 
-Power Timeline is a Decky plugin for Steam Deck. It records battery level as a timeline and gives an energy estimate for the game that was running. In the Quick Access menu (QAM) you can see the current state and look back over the last 1, 3, or 7 days. Closing the page does not stop the recording.
+> “Has my Steam Deck’s battery lost capacity? How much can it hold on a full charge now?”
+>
+> “Where did all my battery charge go? How much drained while the Deck was idle, and how much did gaming use?”
 
-While plugged in, whole-device power cannot be shown. Game energy is an estimate.
+Power Timeline is a Decky plugin for Steam Deck. It lets you compare the battery’s full-charge capacity with its design capacity and puts battery level, game activity, and sleep periods on a single timeline. See how much energy your battery can hold now, then look back at when its charge was used. Recording continues after you close the page.
 
 <p align="center">
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
@@ -18,10 +20,15 @@ This picture is the Quick Access menu while the Deck is plugged in. It shows the
 
 <h2 id="what">What you see</h2>
 
-- Current state: battery, the small power-flow picture, and battery details. While charging, and when the system has an estimate, you can also see about how long until full.
-- Battery history: the last 1 day, the last 3 days, or the last 7 days. Stop on a moment to see the state then, and the game that was being recorded.
-- Game history: an energy estimate for each game.
-- Charge limit: turn Steam's charge limit on or off.
+**How much can the battery hold now?**
+
+Compare the current full-charge capacity, design capacity, and capacity ratio for a reference when checking for capacity loss. This is about how much the battery can hold when full, not how much charge is left right now.
+
+**How does the battery drain while idle and while gaming?**
+
+Look back over the last 1, 3, or 7 days of battery level alongside game activity, power-source changes, and sleep periods to see when the charge dropped and what was happening then. For sleep periods, you can compare the battery levels before and after sleep; there is no continuous sampling or energy calculation during that interval. Game history also shows each game’s energy estimate.
+
+The Quick Access menu (QAM) also shows the current battery level, a small power-flow picture, and battery details, and lets you turn Steam’s charge limit on or off. While charging, when the system provides an estimate, you can also see about how long until full.
 
 <h2 id="install">Install</h2>
 

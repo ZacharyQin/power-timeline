@@ -1,8 +1,10 @@
 <h1 align="center">Power Timeline</h1>
 
-Power Timeline es un plugin de Decky para Steam Deck. Registra el cambio de batería en una línea temporal y da una estimación de energía del juego que estaba en marcha. En el menú de acceso rápido (QAM) puedes ver el estado actual y volver a los últimos 1, 3 o 7 días. Cerrar la página no detiene el registro.
+> “¿La batería de mi Steam Deck ha perdido capacidad? ¿Cuánta energía puede almacenar ahora con una carga completa?”
+>
+> “¿En qué se ha gastado la batería? ¿Cuánto se gastó al dejar la Steam Deck sin usar y cuánto al jugar?”
 
-Enchufado, la potencia de todo el aparato no se puede mostrar. La energía de los juegos es una estimación.
+Power Timeline es un plugin de Decky para Steam Deck. Permite comparar la capacidad de carga completa de la batería con su capacidad de diseño y reúne el nivel de batería, la actividad de los juegos y los periodos de suspensión en una misma línea temporal. Mira cuánta energía puede almacenar ahora la batería y vuelve atrás para ver cuándo se gastó la carga. Cerrar la página no detiene el registro.
 
 <p align="center">
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
@@ -18,10 +20,15 @@ Esta imagen es el menú de acceso rápido con el aparato enchufado. Muestra la b
 
 <h2 id="what">Qué ves</h2>
 
-- Estado actual: batería, flujo de energía pequeño y detalles de la batería. Mientras carga, y cuando el sistema tiene una estimación, también ves aproximadamente cuánto falta para llenarse.
-- Historial de la batería: el último día, los últimos 3 días o los últimos 7 días. Detente en un momento para ver el estado de entonces y el juego que se estaba registrando.
-- Historial de juegos: una estimación de energía de cada juego.
-- Límite de carga: activar o desactivar el límite de carga de Steam.
+**¿Cuánta energía puede almacenar ahora la batería?**
+
+Compara la capacidad actual de carga completa, la capacidad de diseño y la proporción entre ambas para tener una referencia al comprobar si la batería ha perdido capacidad. Aquí importa cuánto puede almacenar cuando está llena, no cuánta carga le queda en este momento.
+
+**¿Cómo baja la batería al dejar la Steam Deck sin usar y al jugar?**
+
+Revisa el nivel de batería del último día, los últimos 3 días o los últimos 7 días junto con la actividad de los juegos, los cambios de alimentación y los periodos de suspensión. Así puedes ver cuándo bajó más la carga y qué estaba pasando entonces. En los periodos de suspensión puedes comparar la carga antes y después; no hay muestreo continuo ni cálculo de energía durante ese intervalo. El historial de juegos también muestra la estimación de energía de cada juego.
+
+El menú de acceso rápido (QAM) también muestra la carga actual, el flujo de energía pequeño y los detalles de la batería, y permite activar o desactivar el límite de carga de Steam. Mientras carga, cuando el sistema tiene una estimación, también puedes ver aproximadamente cuánto falta para llenarse.
 
 <h2 id="install">Instalar</h2>
 

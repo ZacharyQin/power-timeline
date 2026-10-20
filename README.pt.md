@@ -1,8 +1,10 @@
 <h1 align="center">Power Timeline</h1>
 
-O Power Timeline é um plugin Decky para a Steam Deck. Regista a variação da bateria numa linha temporal e dá uma estimativa de energia para o jogo que estava a correr. No menu de acesso rápido (QAM) vês o estado atual e podes voltar aos últimos 1, 3 ou 7 dias. Fechar a página não pára o registo.
+> “A bateria da minha Steam Deck perdeu capacidade? Quanta energia consegue guardar agora com uma carga completa?”
+>
+> “Para onde foi a carga da bateria? Quanto se gastou com a Steam Deck parada e quanto a jogar?”
 
-Ligado à corrente, a potência de todo o aparelho não pode ser mostrada. A energia dos jogos é uma estimativa.
+O Power Timeline é um plugin Decky para a Steam Deck. Permite comparar a capacidade de carga completa da bateria com a capacidade de projeto e reúne o nível da bateria, a atividade dos jogos e os períodos de suspensão numa só linha temporal. Vê quanta energia a bateria consegue guardar agora e volta atrás para perceber quando a carga foi gasta. Fechar a página não pára o registo.
 
 <p align="center">
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
@@ -18,10 +20,15 @@ Esta imagem é o menu de acesso rápido com o aparelho ligado à corrente. Mostr
 
 <h2 id="what">O que vês</h2>
 
-- Estado atual: bateria, fluxo de energia pequeno e detalhes da bateria. Durante o carregamento, e quando o sistema tem uma estimativa, também vês aproximadamente quanto falta até ficar cheia.
-- Histórico da bateria: o último dia, os últimos 3 dias ou os últimos 7 dias. Para num momento para ver o estado de então e o jogo que estava a ser registado.
-- Histórico de jogos: uma estimativa de energia para cada jogo.
-- Limite de carga: ligar ou desligar o limite de carga da Steam.
+**Quanta energia consegue a bateria guardar agora?**
+
+Compara a capacidade atual de carga completa, a capacidade de projeto e a relação entre ambas para teres uma referência ao verificar se a bateria perdeu capacidade. O que interessa aqui é quanto consegue guardar quando está cheia, não a carga que resta neste momento.
+
+**Como se gasta a bateria com a Steam Deck parada e a jogar?**
+
+Revê o nível da bateria no último dia, nos últimos 3 dias ou nos últimos 7 dias, juntamente com a atividade dos jogos, as mudanças de alimentação e os períodos de suspensão. Assim podes ver quando a carga caiu mais e o que estava a acontecer. Nos períodos de suspensão, podes comparar a carga antes e depois; não há amostragem contínua nem cálculo de energia durante esse intervalo. O histórico de jogos também mostra a estimativa de energia de cada jogo.
+
+No menu de acesso rápido (QAM) também vês a carga atual, o fluxo de energia pequeno e os detalhes da bateria, e podes ligar ou desligar o limite de carga da Steam. Durante o carregamento, quando o sistema tem uma estimativa, também podes ver aproximadamente quanto falta até ficar cheia.
 
 <h2 id="install">Instalar</h2>
 
