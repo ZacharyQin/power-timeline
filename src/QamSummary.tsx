@@ -11,8 +11,8 @@ import { LocaleFlags } from "./LocaleFlags";
 import { GameIcon } from "./GameIcon";
 import { updateView } from "./viewState";
 import { PowerFlowChart } from "./PowerFlowChart";
+import { QamThermal } from "./QamThermal";
 import type { PowerInfo } from "./types";
-
 function openPage(page: "timeline" | "flow" | "power") {
   updateView(page === "timeline" ? { page } : { page, focus: "back" });
   Navigation.Navigate("/power-timeline");
@@ -163,6 +163,21 @@ export function QamSummary() {
       .pt-qam-game-status-interrupted { color: #E6D58A; background: color-mix(in srgb, #E6D58A 16%, transparent); }
       .pt-qam-game-status-ended { color: color-mix(in srgb, #fff 62%, transparent); background: color-mix(in srgb, #fff 8%, transparent); }
       .pt-qam-game-empty { margin: 6px 0 2px; font-size: 12px; line-height: 16px; color: color-mix(in srgb, #fff 52%, transparent); }
+      .pt-qam-thermal { position: relative; width: 100%; margin: 4px 0 0; overflow: visible; }
+      .pt-qam-thermal-art { position: absolute; left: 0; right: 0; bottom: 0; aspect-ratio: 302.3018755912781 / 122.11307072639465; }
+      .pt-qam-thermal-art img { position: absolute; }
+      .pt-qam-fan-front { z-index: 2; }
+      .pt-qam-rotor { z-index: 3; }
+      .pt-qam-thermal-overlay { position: absolute; z-index: 1; transform-origin: 0 0; pointer-events: none; }
+      .pt-qam-thermal-overlay > canvas { display: block; }
+      .pt-qam-exhaust-buffer { position: absolute; width: 0; height: 0; visibility: hidden; }
+      .pt-qam-exhaust { position: absolute; inset: 0; z-index: 4; }
+      .pt-qam-exhaust-mask { position: absolute; overflow: hidden; mask-size: 100% 100%; mask-repeat: no-repeat; -webkit-mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; }
+      .pt-qam-exhaust-gradient { position: absolute; left: 0; width: 100%; background-image: linear-gradient(to bottom, transparent 0%, var(--flow-color) 18%, transparent 42%, transparent 58%, var(--flow-color) 82%, transparent 100%); background-repeat: repeat-y; will-change: transform; }
+      .pt-qam-thermal-tag { position: absolute; z-index: 6; transform: translate(-50%, -50%); padding: 0 5px; border-radius: 999px; background: rgba(6, 10, 16, 0.86); color: #fff; font-size: 12px; font-weight: 760; line-height: 16px; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 1px #000; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72), 0 1px 2px rgba(0, 0, 0, 0.65); }
+      .pt-qam-thermal-tag-name { margin-right: 3px; font-size: 10px; font-weight: 650; color: rgba(255, 255, 255, 0.92); }
+      .pt-qam-thermal-tag-wireless { transform: translate(-100%, -50%); }
+      .pt-qam-thermal-tag-ssd { transform: translate(0, -50%); }
     `}</style>
     <SemanticStyles />
     <QueryStatus padding="standard" loading={summary.loading && !summary.snapshot} error={summary.error} retry={summary.refresh} />
@@ -183,6 +198,7 @@ export function QamSummary() {
         <div className="pt-qam-game-head"><GameIcon gameId={session.game_id} /><span className="pt-qam-game-name">{displayGameName(session.name, session.game_id)}</span><span className={`pt-qam-game-status pt-qam-game-status-${session.status}`}>{sessionLabel(session.status)}</span></div>
       </div>)}
     </div>}
+    <QamThermal thermals={batteryInfo.data?.thermals ?? null} active={enabled} />
     <PanelSectionRow>
       {/* @ts-expect-error Steam 导航树要显式 focusable，Decky 的 Focusable 类型没声明这个属性。 */}
       <Focusable className="pt-qam-spec" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "12px 16px" }} tabIndex={0} focusable aria-label={t("qam.specs")} onClick={() => openPage("power")} onOKButton={() => openPage("power")} onOKActionDescription={t("qam.openPower")}>
