@@ -52,13 +52,21 @@ export const ROTOR = { x: -1.3244, y: -17.4427, visualTimeScale: 0.025 };
 export const HEAT_RESOLUTION = 360 / Math.max(frame.width, frame.height);
 export const EXHAUST_PERIOD = Math.max(2, Math.ceil(42 * HEAT_RESOLUTION));
 export const REFERENCE_FAN_RPM = 3000;
+const EXHAUST_LIMIT_MM = 180;
+export const WIND_ANCHOR = { x: flow.finX - flow.finWidth / 2, y: flow.finY };
+
+function exhaustReach(rpm: number) {
+  if (rpm <= 0) return 0;
+  const ideal = EXHAUST_LIMIT_MM * (1 - Math.exp(-rpm / REFERENCE_FAN_RPM * Math.LN2));
+  return Math.min(EXHAUST_MM, ideal);
+}
 
 export const ART_LAYERS = {
   hardware: { x: -151.15093779563904, y: -61.05653536319733, w: 302.3018755912781, h: 122.11307072639465 },
   rotor: { x: -18.15440079033375, y: -34.272698143720625, w: 33.65982867449522, h: 33.65999811699614 },
   fan: { x: -26.045401970148088, y: -41.954600641727446, w: 48.57100251734257, h: 49.35490045368672 },
 };
-export const THERMAL_MARKS = fieldData.parts.map((part) => ({ key: part.key as PartKey, x: part.x, y: part.y }));
+export const THERMAL_MARKS = fieldData.parts.map((part) => ({ key: part.key as PartKey, x: part.x, y: part.y, width: part.width }));
 
 function mergeBounds(a: Box | null, b: Box | null) {
   if (!a) return b;
@@ -148,7 +156,7 @@ export function createQamHeat(canvas: HTMLCanvasElement, exhaustCanvas: HTMLCanv
   let flowBounds: Box | null = null;
   let exhaustBounds: Box | null = null;
   let strength = 0;
-  const distanceMm = EXHAUST_MM;
+  let distanceMm = 0;
   const horizontalSpread = Math.tan(EXHAUST_HALF_RAD);
   const color = new Uint8Array(3);
   const fanUp = -flow.fanY;
@@ -304,9 +312,12 @@ export function createQamHeat(canvas: HTMLCanvasElement, exhaustCanvas: HTMLCanv
   return {
     setState(temperatures, nextRpm) {
       for (const key of Object.keys(temperatures) as PartKey[]) setTemperature(key, temperatures[key]);
-      const nextStrength = (nextRpm ?? 0) > 0 ? EXHAUST_STRENGTH : 0;
-      if (nextStrength !== strength) flowDirty = true;
+      const rpm = nextRpm ?? 0;
+      const nextStrength = rpm > 0 ? EXHAUST_STRENGTH : 0;
+      const nextDistance = exhaustReach(rpm);
+      if (nextStrength !== strength || nextDistance !== distanceMm) flowDirty = true;
       strength = nextStrength;
+      distanceMm = nextDistance;
     },
     render() {
       if (!fieldsDirty && !flowDirty) return false;

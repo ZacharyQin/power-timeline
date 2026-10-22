@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from py_modules.power_info import PowerInfo, charge_estimate
+from py_modules.power_info import PowerInfo, charge_estimate, read_thermals
 from py_modules.recorder import Recorder
 from py_modules.telemetry import Telemetry
 from test_recorder import sample
@@ -102,6 +102,23 @@ class PowerMetadataTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["battery"]["system_w"], 25.2)
         self.assertEqual(result["adapter"], {"voltage_v": None, "current_a": None, "limit_w": None})
         self.assertEqual(result["estimate"]["status"], "discharging")
+    async def test_thermals_use_labeled_hwmon_and_ignore_unlabeled_noise(self):
+        deck = self.root / "class/hwmon/hwmon1"
+        zone = self.root / "class/hwmon/hwmon2"
+        radio = self.root / "class/hwmon/hwmon3"
+        disk = self.root / "class/hwmon/hwmon4"
+        for directory in (deck, zone, radio, disk):
+            directory.mkdir()
+        self.write(deck, name="steamdeck_hwmon", temp2_label="Battery Temp", temp2_input="29000", fan1_input="2083")
+        self.write(zone, name="acpitz", temp1_input="54000")
+        self.write(radio, name="ath11k_hwmon", temp1_input="51000")
+        self.write(disk, name="nvme", temp1_label="Composite", temp1_input="39900", temp2_input="999000")
+        self.assertEqual(read_thermals(self.root), {
+            "chip_c": 54, "battery_c": 29, "wireless_c": 51, "ssd_c": 39.9, "fan_rpm": 2083,
+        })
+        result = await self.info.read()
+        self.assertEqual(result["thermals"]["fan_rpm"], 2083)
+
 
 
 class ChargeHistoryTests(unittest.TestCase):

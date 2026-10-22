@@ -1,7 +1,7 @@
 import { useQuickAccessVisible } from "@decky/api";
-import { Focusable, Navigation, PanelSection, PanelSectionRow, Toggle } from "@decky/ui";
-import { useEffect, useRef, useState } from "react";
-import { FaBatteryHalf, FaBolt, FaChartLine, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
+import { Focusable, Navigation, PanelSection, PanelSectionRow } from "@decky/ui";
+import { FaBatteryHalf, FaChartLine, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
+import { ChargeLimit } from "./QamChargeLimit";
 import { getPowerInfo, getTimeline } from "./backend";
 import { QueryStatus, Reading, SemanticStyles, SemanticText, SemanticValue, batteryStateText, sessionLabel, supplyText, valueText } from "./components";
 import { displayGameName, t, useLocale } from "./i18n";
@@ -12,6 +12,7 @@ import { GameIcon } from "./GameIcon";
 import { updateView } from "./viewState";
 import { PowerFlowChart } from "./PowerFlowChart";
 import { QamThermal } from "./QamThermal";
+import { QamFanCurve } from "./QamFanCurve";
 import type { PowerInfo } from "./types";
 function openPage(page: "timeline" | "flow" | "power") {
   updateView(page === "timeline" ? { page } : { page, focus: "back" });
@@ -58,56 +59,6 @@ function qamEstimate(info: PowerInfo | null, state: string, supply: string) {
   </span>;
 }
 
-type ClientSettingWriter = (value: boolean | number) => void;
-
-function readClientSetting(key: string): [unknown, ClientSettingWriter | null] {
-  const host: object = globalThis;
-  if (!("settingsStore" in host)) return [undefined, null];
-  const store = host.settingsStore;
-  if (!store || typeof store !== "object" || !("GetClientSetting" in store) || typeof store.GetClientSetting !== "function") return [undefined, null];
-  try {
-    const result = store.GetClientSetting(key);
-    if (!Array.isArray(result)) return [undefined, null];
-    const [value, write] = result;
-    // Steam 的 setter 是元组第二项，运行时只能确认它是函数。
-    const writeSetting: ClientSettingWriter | null = typeof write === "function" ? write : null;
-    return [value, writeSetting];
-  } catch {
-    return [undefined, null];
-  }
-}
-
-function ChargeLimitToggle({ active }: { active: boolean }) {
-  const [on, setOn] = useState<boolean | null>(null);
-  const [limit, setLimit] = useState<number | null>(null);
-  const write = useRef<ClientSettingWriter | null>(null);
-  const pending = useRef<{ value: boolean; until: number } | null>(null);
-  useEffect(() => {
-    if (!active) return;
-    const read = () => {
-      const [enabled, setEnabled] = readClientSetting("steamos_charge_limit_enabled");
-      const [percent] = readClientSetting("steamos_charge_limit");
-      if (setEnabled) write.current = setEnabled;
-      if (pending.current && Date.now() < pending.current.until && enabled !== pending.current.value) return;
-      pending.current = null;
-      setOn(typeof enabled === "boolean" ? enabled : null);
-      setLimit(typeof percent === "number" ? percent : null);
-    };
-    read();
-    const timer = window.setInterval(read, 1000);
-    return () => window.clearInterval(timer);
-  }, [active]);
-  if (on === null || !write.current) return null;
-  return <PanelSectionRow>
-    <Focusable className="pt-qam-limit">
-      <div className="pt-qam-limit-copy">
-        <div className="pt-qam-limit-title"><FaBolt aria-hidden="true" />{t("qam.chargeLimit")}</div>
-        <div className="pt-qam-limit-note">{on ? t("qam.chargeStop", { limit: limit ?? "—" }) : t("qam.chargeUnlimited")}</div>
-      </div>
-      <Toggle aria-label={t("qam.chargeLimit")} value={on} onChange={(value) => { pending.current = { value, until: Date.now() + 3000 }; setOn(value); write.current?.(value); }} />
-    </Focusable>
-  </PanelSectionRow>;
-}
 
 export function QamSummary() {
   useLocale();
@@ -133,7 +84,7 @@ export function QamSummary() {
       .pt-qam-chart.gpfocus, .pt-qam-chart.gpfocuswithin, .pt-qam-chart:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
       .pt-qam-flow { position: relative; z-index: 0; background: transparent; }
       .pt-qam-flow.gpfocus, .pt-qam-flow.gpfocuswithin, .pt-qam-flow:focus-visible { background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72); outline: none; }
-      .pt-qam-limit { position: relative; z-index: 1; background: transparent; }
+
       .pt-qam-spec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 16px; margin: 10px 0 6px; scroll-margin: 12px 0; }
       .pt-qam-spec-col { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
       .pt-qam-spec-battery { --pt-spec-accent: #7BDCC5; }
@@ -150,10 +101,6 @@ export function QamSummary() {
       .pt-qam-eta-unit { margin-right: 3px; font-size: 11px; line-height: 14px; font-weight: 550; color: color-mix(in srgb, #fff 68%, #7BDCC5); }
       .pt-qam-eta-full { font-size: 14px; line-height: 18px; font-weight: 650; letter-spacing: 0.04em; color: #7BDCC5; }
       .pt-qam-eta-empty { font-size: 16px; line-height: 20px; color: color-mix(in srgb, #fff 42%, transparent); }
-      .pt-qam-limit { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
-      .pt-qam-limit-copy { min-width: 0; }
-      .pt-qam-limit-title { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; }
-      .pt-qam-limit-note { font-size: 11px; line-height: 15px; color: color-mix(in srgb, #fff 62%, transparent); }
       .pt-qam-games { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px; }
       .pt-qam-game { min-width: 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); }
       .pt-qam-game-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -174,10 +121,25 @@ export function QamSummary() {
       .pt-qam-exhaust { position: absolute; inset: 0; z-index: 4; }
       .pt-qam-exhaust-mask { position: absolute; overflow: hidden; mask-size: 100% 100%; mask-repeat: no-repeat; -webkit-mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; }
       .pt-qam-exhaust-gradient { position: absolute; left: 0; width: 100%; background-image: linear-gradient(to bottom, transparent 0%, var(--flow-color) 18%, transparent 42%, transparent 58%, var(--flow-color) 82%, transparent 100%); background-repeat: repeat-y; will-change: transform; }
-      .pt-qam-thermal-tag { position: absolute; z-index: 6; transform: translate(-50%, -50%); padding: 0 5px; border-radius: 999px; background: rgba(6, 10, 16, 0.86); color: #fff; font-size: 12px; font-weight: 760; line-height: 16px; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 1px #000; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72), 0 1px 2px rgba(0, 0, 0, 0.65); }
-      .pt-qam-thermal-tag-name { margin-right: 3px; font-size: 10px; font-weight: 650; color: rgba(255, 255, 255, 0.92); }
-      .pt-qam-thermal-tag-wireless { transform: translate(-100%, -50%); }
-      .pt-qam-thermal-tag-ssd { transform: translate(0, -50%); }
+      .pt-qam-thermal-leaders { position: absolute; inset: 0; z-index: 5; overflow: visible; pointer-events: none; }
+      .pt-qam-thermal-leaders path { fill: none; stroke: #fff; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+      .pt-qam-thermal-leaders circle { fill: #fff; stroke: none; }
+      .pt-qam-thermal-tag { position: absolute; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 1px; transform: translate(-50%, -19.5px); color: #fff; white-space: nowrap; pointer-events: none; }
+      .pt-qam-thermal-tag-name, .pt-qam-thermal-tag-value { color: #fff; paint-order: stroke fill; }
+      .pt-qam-thermal-tag-name { font-size: 10px; font-weight: 500; line-height: 11px; -webkit-text-stroke: 0.6px #000; }
+      .pt-qam-thermal-tag-value { font-size: 13px; font-weight: 650; line-height: 15px; -webkit-text-stroke: 0.9px #000; }
+      .pt-qam-fan { margin: 16px 0 4px; }
+      .pt-qam-fan-focus.gpfocus, .pt-qam-fan-focus.gpfocuswithin, .pt-qam-fan-focus:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
+      .pt-qam-fan-legend { display: flex; justify-content: space-between; align-items: center; height: 16px; font-size: 10px; line-height: 16px; }
+      .pt-qam-fan-legend span { display: inline-flex; align-items: center; gap: 4px; }
+      .pt-qam-fan-legend .off, .pt-qam-fan-read-row.off { opacity: 0.35; }
+      .pt-qam-fan-swatch { display: inline-block; width: 10px; height: 0; border-top: 2px solid; }
+      .pt-qam-fan-swatch-dash { border-top-style: dashed; }
+      .pt-qam-fan svg { display: block; width: 100%; height: 96px; touch-action: pan-y; }
+      .pt-qam-fan-read { display: flex; flex-direction: column; justify-content: center; height: 24px; font-variant-numeric: tabular-nums; }
+      .pt-qam-fan-read-row { display: flex; align-items: center; gap: 6px; height: 12px; line-height: 12px; }
+      .pt-qam-fan-read-name { width: 52px; flex-shrink: 0; font-size: 10px; }
+      .pt-qam-fan-read-value { font-size: 11px; font-weight: 500; letter-spacing: -0.2px; }
     `}</style>
     <SemanticStyles />
     <QueryStatus padding="standard" loading={summary.loading && !summary.snapshot} error={summary.error} retry={summary.refresh} />
@@ -186,7 +148,7 @@ export function QamSummary() {
     </Reading>
     <PanelSectionRow><Focusable noFocusRing className="pt-qam-chart pt-qam-flow pt-qam-top" preferredFocus onGamepadFocus={(event) => revealQamHeading(event.currentTarget)} onActivate={() => openPage("flow")} onOKButton={() => openPage("flow")} onOKActionDescription={t("qam.openFlow")}><PowerFlowChart flow={summary.snapshot?.power_flow ?? null} compact active={enabled} /></Focusable></PanelSectionRow>
     {showCharge && sample && <Reading padding="standard" icon={FaHourglassHalf} label={t("qam.eta")}>{qamEstimate(estimate.data ?? contract.data, sample.battery_state, sample.supply)}</Reading>}
-    <ChargeLimitToggle active={enabled} />
+    <ChargeLimit active={enabled} percent={sample?.battery_percent ?? null} charging={sample?.battery_state === "Charging"} />
 
     <Reading padding="standard" icon={FaChartLine} label={t("qam.lastDay")} />
     {day.data && <PanelSectionRow><TimeSeriesChart timeline={day.data} compact onOpen={() => openPage("timeline")} /></PanelSectionRow>}
@@ -199,6 +161,7 @@ export function QamSummary() {
       </div>)}
     </div>}
     <QamThermal thermals={batteryInfo.data?.thermals ?? null} active={enabled} />
+    <QamFanCurve chip={batteryInfo.data?.thermals.chip_c ?? null} ssd={batteryInfo.data?.thermals.ssd_c ?? null} watts={summary.snapshot?.power_flow?.apu_w ?? null} rpm={batteryInfo.data?.thermals.fan_rpm ?? null} open={visible} />
     <PanelSectionRow>
       {/* @ts-expect-error Steam 导航树要显式 focusable，Decky 的 Focusable 类型没声明这个属性。 */}
       <Focusable className="pt-qam-spec" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "12px 16px" }} tabIndex={0} focusable aria-label={t("qam.specs")} onClick={() => openPage("power")} onOKButton={() => openPage("power")} onOKActionDescription={t("qam.openPower")}>

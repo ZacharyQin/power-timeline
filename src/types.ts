@@ -164,6 +164,7 @@ export interface PowerInfo {
   };
   adapter: { voltage_v: number | null; current_a: number | null; limit_w: number | null };
   last_charge: { ended_at: number | null; elapsed_seconds: number | null; uncertainty_seconds: number | null; reason: string | null };
+  thermals: { chip_c: number | null; battery_c: number | null; wireless_c: number | null; ssd_c: number | null; fan_rpm: number | null };
   estimate: ChargeEstimate;
   errors: Record<string, string>;
 }

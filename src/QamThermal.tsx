@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "./i18n";
 import type { PowerInfo } from "./types";
-import { ART_LAYERS, createQamHeat, DECK_VIEW, EXHAUST_PERIOD, HEAT_RESOLUTION, REFERENCE_FAN_RPM, ROTOR, THERMAL_MARKS, thermalFrame, thermalHostMm, type QamHeat } from "./thermalField";
+import { ART_LAYERS, createQamHeat, DECK_VIEW, EXHAUST_PERIOD, HEAT_RESOLUTION, REFERENCE_FAN_RPM, ROTOR, THERMAL_MARKS, WIND_ANCHOR, thermalFrame, thermalHostMm, type QamHeat } from "./thermalField";
 
 type Thermals = PowerInfo["thermals"];
 
@@ -17,6 +17,10 @@ function text(celsius: number | null) {
   return celsius == null || Number.isNaN(celsius) ? "—" : `${celsius.toFixed(0)}°`;
 }
 
+function rpmText(rpm: number | null) {
+  return rpm == null || Number.isNaN(rpm) ? "—" : `${Math.round(rpm)}`;
+}
+
 function layerStyle(box: { x: number; y: number; w: number; h: number }) {
   return {
     left: `${(box.x - DECK_VIEW.x) / DECK_VIEW.w * 100}%`,
@@ -26,12 +30,38 @@ function layerStyle(box: { x: number; y: number; w: number; h: number }) {
   };
 }
 
-function markStyle(mark: "battery" | "apu" | "wireless" | "ssd") {
-  const part = THERMAL_MARKS.find((item) => item.key === mark)!;
+function hostPoint(x: number, y: number) {
   return {
-    left: `${(part.x - DECK_VIEW.x) / DECK_VIEW.w * 100}%`,
-    top: `${(part.y - DECK_VIEW.y) / DECK_VIEW.h * 100}%`,
+    left: `${(x - DECK_VIEW.x) / DECK_VIEW.w * 100}%`,
+    top: `${(y - thermalFrame.y) / thermalHostMm * 100}%`,
   };
+}
+
+function callouts() {
+  const part = (mark: "battery" | "apu" | "wireless" | "ssd") => THERMAL_MARKS.find((item) => item.key === mark)!;
+  const battery = part("battery");
+  const apu = part("apu");
+  const wireless = part("wireless");
+  const ssd = part("ssd");
+  const batteryEdge = battery.x - battery.width / 2;
+  return [
+    { mark: "battery" as const, label: { x: -116, y: battery.y }, dot: { x: batteryEdge, y: battery.y }, points: [{ x: -102, y: battery.y }, { x: batteryEdge, y: battery.y }] },
+    { mark: "apu" as const, label: { x: apu.x, y: -102 }, dot: { x: apu.x, y: apu.y }, points: [{ x: apu.x, y: -88 }, { x: apu.x, y: apu.y }] },
+    { mark: "wireless" as const, label: { x: 118, y: 0 }, dot: { x: wireless.x, y: wireless.y }, points: [{ x: 104, y: 0 }, { x: 96, y: 0 }, { x: wireless.x, y: wireless.y }] },
+    { mark: "ssd" as const, label: { x: 118, y: 46 }, dot: { x: ssd.x, y: ssd.y }, points: [{ x: 104, y: 46 }, { x: ssd.x, y: ssd.y }] },
+  ];
+}
+
+function windLead() {
+  return {
+    label: { x: -78, y: -102 },
+    dot: WIND_ANCHOR,
+    points: [{ x: -64, y: -102 }, { x: -64, y: -74 }, { x: WIND_ANCHOR.x, y: WIND_ANCHOR.y }],
+  };
+}
+
+function leaderPath(points: { x: number; y: number }[]) {
+  return points.map((point, index) => `${index ? "L" : "M"}${point.x - DECK_VIEW.x} ${point.y - thermalFrame.y}`).join(" ");
 }
 
 function placeOverlay(art: HTMLElement, overlay: HTMLElement, canvas: HTMLCanvasElement) {
@@ -193,7 +223,6 @@ export function QamThermal({ thermals, active }: { thermals: Thermals | null; ac
         <img alt="" className="pt-qam-hardware" src={`${ART}/front-hardware.png`} style={layerStyle(ART_LAYERS.hardware)} onError={() => setFailed(true)} />
         <img alt="" className="pt-qam-rotor" ref={rotor} src={`${ART}/front-rotor.png`} style={{ ...layerStyle(ART_LAYERS.rotor), transformOrigin: `${(ROTOR.x - ART_LAYERS.rotor.x) / ART_LAYERS.rotor.w * 100}% ${(ROTOR.y - ART_LAYERS.rotor.y) / ART_LAYERS.rotor.h * 100}%` }} />
         <img alt="" className="pt-qam-fan-front" src={`${ART}/front-fan-front.png`} style={layerStyle(ART_LAYERS.fan)} />
-        {PARTS.map((part) => <span key={part.key} className={`pt-qam-thermal-tag pt-qam-thermal-tag-${part.mark}`} style={markStyle(part.mark)} aria-label={`${t(part.label)} ${text(thermals ? thermals[part.key] : null)}`}><span className="pt-qam-thermal-tag-name">{t(part.label)}</span>{text(thermals ? thermals[part.key] : null)}</span>)}
       </div>
       <div className="pt-qam-thermal-overlay" ref={overlay}>
         <canvas ref={canvas} />
@@ -204,6 +233,21 @@ export function QamThermal({ thermals, active }: { thermals: Thermals | null; ac
           </div>
         </div>
       </div>
+      <svg className="pt-qam-thermal-leaders" viewBox={`0 0 ${DECK_VIEW.w} ${thermalHostMm}`} preserveAspectRatio="none">
+        {[windLead(), ...callouts()].map((lead) => <g key={`${lead.dot.x},${lead.dot.y}`}>
+          <path d={leaderPath(lead.points)} />
+          <circle cx={lead.dot.x - DECK_VIEW.x} cy={lead.dot.y - thermalFrame.y} r="1.6" />
+        </g>)}
+      </svg>
+      {PARTS.map((part) => {
+        const lead = callouts().find((item) => item.mark === part.mark)!;
+        return <span key={part.key} className={`pt-qam-thermal-tag pt-qam-thermal-tag-${part.mark}`} style={hostPoint(lead.label.x, lead.label.y)} aria-label={`${t(part.label)} ${text(thermals ? thermals[part.key] : null)}`}><span className="pt-qam-thermal-tag-name">{t(part.label)}</span><span className="pt-qam-thermal-tag-value">{text(thermals ? thermals[part.key] : null)}</span></span>;
+      })}
+      {(() => {
+        const lead = windLead();
+        const rpm = thermals ? thermals.fan_rpm : null;
+        return <span className="pt-qam-thermal-tag pt-qam-thermal-tag-wind" style={hostPoint(lead.label.x, lead.label.y)} aria-label={`${t("qam.partAir")} ${rpmText(rpm)}`}><span className="pt-qam-thermal-tag-name">{t("qam.partAir")}</span><span className="pt-qam-thermal-tag-value">{rpmText(rpm)}</span></span>;
+      })()}
     </div>
   </div>;
 }

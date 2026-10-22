@@ -35,6 +35,57 @@ def charge_estimate(current, upower, now, error=None):
     return result
 
 
+def _milli_celsius(path):
+    try:
+        value = int(path.read_text().strip())
+    except (OSError, ValueError):
+        return None
+    if value < -1000 or value > 150000:
+        return None
+    return value / 1000
+
+
+def _labeled_celsius(hwmon, label):
+    for path in hwmon.glob("temp*_label"):
+        try:
+            if path.read_text().strip() != label:
+                continue
+            return _milli_celsius(path.with_name(path.name.replace("_label", "_input")))
+        except OSError:
+            continue
+    return None
+
+
+def read_thermals(sys_root):
+    """Temperatures and fan speed already exposed by hwmon. Missing sensors stay null."""
+    reading = {"chip_c": None, "battery_c": None, "wireless_c": None, "ssd_c": None, "fan_rpm": None}
+    root = sys_root / "class/hwmon"
+    if not root.is_dir():
+        return reading
+    for hwmon in root.glob("hwmon*"):
+        try:
+            name = (hwmon / "name").read_text().strip()
+        except OSError:
+            continue
+        if name == "steamdeck_hwmon":
+            reading["battery_c"] = _labeled_celsius(hwmon, "Battery Temp")
+            try:
+                rpm = int((hwmon / "fan1_input").read_text())
+            except (OSError, ValueError):
+                rpm = None
+            if rpm is not None and 0 <= rpm <= 20000:
+                reading["fan_rpm"] = rpm
+        elif name == "acpitz":
+            reading["chip_c"] = _milli_celsius(hwmon / "temp1_input")
+        elif name == "ath11k_hwmon":
+            reading["wireless_c"] = _milli_celsius(hwmon / "temp1_input")
+        elif name == "nvme":
+            reading["ssd_c"] = _labeled_celsius(hwmon, "Composite") or _milli_celsius(hwmon / "temp1_input")
+        elif name == "amdgpu" and reading["chip_c"] is None:
+            reading["chip_c"] = _labeled_celsius(hwmon, "edge")
+    return reading
+
+
 class PowerInfo:
     def __init__(self, telemetry):
         self.telemetry = telemetry
@@ -243,6 +294,7 @@ class PowerInfo:
             "adapter": {"voltage_v": pd_voltage, "current_a": pd_current,
                         "limit_w": pd_voltage * pd_current if pd_voltage is not None and pd_current is not None else None},
             "estimate": charge_estimate(current, self._upower, now, self._upower_error),
+            "thermals": read_thermals(self.telemetry.sys_root),
             "errors": errors,
         }
 

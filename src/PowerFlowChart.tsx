@@ -1,4 +1,4 @@
-import { useId, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import type { PowerFlowReading } from "./types";
 import { getPowerBand, semanticColors } from "./displaySemantics";
 import { t } from "./i18n";
@@ -6,6 +6,40 @@ import { t } from "./i18n";
 export const flowIsFresh = (flow: PowerFlowReading | null) => !!flow && Math.abs(Date.now() / 1000 - flow.timestamp) <= 10;
 export const flowWatts = (w: number | null, signed = false) => w === null ? "— W" : `${signed && w > 0 ? "+" : ""}${w.toFixed(2)} W`;
 export const flowColor = (w: number | null) => w === null ? "currentColor" : getPowerBand(Math.abs(w))!.color;
+
+const COMPACT_FLOW_INTERVAL_MS = 3000;
+
+function flowSignature(flow: PowerFlowReading | null) {
+  const quantize = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "" : (Math.round(value * 10) / 10).toFixed(1);
+  return flow ? [flow.mode, quantize(flow.input_w), quantize(flow.apu_w), quantize(flow.peripheral_w), quantize(flow.battery_net_w)].join("|") : "none";
+}
+
+function useCompactFlow(flow: PowerFlowReading | null, compact: boolean) {
+  const latest = useRef(flow);
+  latest.current = flow;
+  const signature = useRef(flowSignature(flow));
+  const [held, setHeld] = useState(flow);
+  useEffect(() => {
+    if (!compact) return;
+    const next = latest.current;
+    const key = flowSignature(next);
+    if (key === signature.current) return;
+    signature.current = key;
+    setHeld(next);
+  }, [compact, flow?.mode]);
+  useEffect(() => {
+    if (!compact) return;
+    const id = window.setInterval(() => {
+      const next = latest.current;
+      const key = flowSignature(next);
+      if (key === signature.current) return;
+      signature.current = key;
+      setHeld(next);
+    }, COMPACT_FLOW_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [compact]);
+  return compact ? held : flow;
+}
 
 type Glyph = "battery" | "plug" | "deck" | "apu" | "peripheral" | "unknown";
 function FlowGlyph({ kind, x, y, size }: { kind: Glyph; x: number; y: number; size: number }) {
@@ -22,10 +56,11 @@ function FlowGlyph({ kind, x, y, size }: { kind: Glyph; x: number; y: number; si
 interface Branch { kind: Glyph; label: string; value: number | null; reverse?: boolean }
 
 export function PowerFlowChart({ flow, compact = false, active = true }: { flow: PowerFlowReading | null; compact?: boolean; active?: boolean }) {
+  const shown = useCompactFlow(flow, compact);
   const id = `pt-flow-${useId().replace(/:/g, "")}`;
-  const fresh = flowIsFresh(flow);
-  const current = fresh ? flow : null;
-  const external = flow?.mode === "external";
+  const fresh = flowIsFresh(shown);
+  const current = fresh ? shown : null;
+  const external = shown?.mode === "external";
   const branches: Branch[] = [
     { kind: "apu", label: "APU", value: current?.apu_w ?? null },
     { kind: "peripheral", label: compact ? t("flow.peripheralShort") : external ? t("flow.peripheralDevices") : t("flow.peripheralPower"), value: current?.peripheral_w ?? null },
@@ -63,9 +98,9 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
   const sourceValue = current?.mode === "battery" && input !== null ? -input : input;
   const batteryAssist = laidOut.some(b => b.reverse);
   let caption = compact ? "" : t("flow.captionNormal");
-  if (!flow) caption = t("flow.captionWait");
+  if (!shown) caption = t("flow.captionWait");
   else if (!fresh) caption = t("flow.captionStale");
-  else if (!compact && flow.mode === "unknown") caption = t("flow.captionUnknown");
+  else if (!compact && shown.mode === "unknown") caption = t("flow.captionUnknown");
   else if (!compact && external && current?.input_w === null) caption = t("flow.captionNoInput");
   else if (!compact && current && current.peripheral_w === null) caption = current.difference_w !== null && current.difference_w < 0 ? t("flow.captionNegative") : t("flow.captionIncomplete");
   else if (!compact && batteryAssist) caption = t("flow.captionAssist");

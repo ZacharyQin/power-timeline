@@ -47,7 +47,7 @@ jobs:
           package.parent.mkdir(exist_ok=True)
           members = [root / name for name in (
               "plugin.json", "package.json", "main.py", "LICENSE", "CHANGELOG.md",
-              "README.md", "README.zh-CN.md", "README.pt.md", "README.es.md", "README.ja.md", "README.ko.md", "dist/index.js")]
+              "README.md", "README.zh-CN.md", "README.pt.md", "README.es.md", "README.ja.md", "README.ko.md", "dist/index.js", "dist/front-hardware.png", "dist/front-rotor.png", "dist/front-fan-front.png")]
           members += sorted((root / "py_modules").glob("*.py"))
           with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
               for path in members:

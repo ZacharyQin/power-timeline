@@ -1,6 +1,6 @@
 {
   "name": "power-timeline",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Battery timeline, power history and game energy estimates for Steam Deck",
   "type": "module",
   "private": true,
