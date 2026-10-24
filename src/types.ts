@@ -1,3 +1,19 @@
+export interface SailingStatus {
+  enabled: boolean;
+  phase: "disabled" | "waiting" | "charging" | "paused" | "error";
+  delta_percent: number;
+  lower_percent: number | null;
+  upper_percent: number | null;
+  battery_percent: number | null;
+  supply: "external" | "battery" | "unknown";
+  battery_state: string;
+  hardware_limit_percent: number | null;
+  native_enabled: boolean | null;
+  native_limit_percent: number | null;
+  error: string | null;
+  updated_at: number;
+}
+
 export interface RailReading { w: number | null; voltage_v: number | null; current_a: number | null }
 export interface PowerFlowReading {
   timestamp: number;

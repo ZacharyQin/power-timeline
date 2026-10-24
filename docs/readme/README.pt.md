@@ -7,13 +7,13 @@
 O Power Timeline é um plugin Decky para a Steam Deck. Permite comparar a capacidade de carga completa da bateria com a capacidade de projeto e reúne o nível da bateria, a atividade dos jogos e os períodos de suspensão numa só linha temporal. Vê quanta energia a bateria consegue guardar agora e volta atrás para perceber quando a carga foi gasta. Fechar a página não pára o registo.
 
 <p align="center">
-  <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
+  <a href="../../README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
 </p>
 <p align="center">
-  <a href="#what">O que vês</a> · <a href="#install">Instalar</a> · <a href="#try-it">Primeira utilização</a> · <a href="#limits">Tenha em atenção</a> · <a href="#language">Idioma</a> · <a href="./CHANGELOG.md">Registo</a>
+  <a href="#what">O que vês</a> · <a href="#install">Instalar</a> · <a href="#try-it">Primeira utilização</a> · <a href="#limits">Tenha em atenção</a> · <a href="#language">Idioma</a> · <a href="../../CHANGELOG.md">Registo</a>
 </p>
 <p align="center">
-  <img src="./docs/qam-menu.jpg" alt="Power Timeline no menu de acesso rápido: bateria, fluxo de energia pequeno, últimas 24 horas e detalhes da bateria" width="640">
+  <img src="../qam-menu.jpg" alt="Power Timeline no menu de acesso rápido: bateria, fluxo de energia pequeno, últimas 24 horas e detalhes da bateria" width="640">
 </p>
 
 Esta imagem é o menu de acesso rápido com o aparelho ligado à corrente. Mostra a bateria atual, o fluxo de energia pequeno, as últimas 24 horas e os detalhes da bateria. Os watts da imagem não são a potência de todo o aparelho.
@@ -29,6 +29,12 @@ Compara a capacidade atual de carga completa, a capacidade de projeto e a relaç
 Revê o nível da bateria no último dia, nos últimos 3 dias ou nos últimos 7 dias, juntamente com a atividade dos jogos, as mudanças de alimentação e os períodos de suspensão. Assim podes ver quando a carga caiu mais e o que estava a acontecer. Nos períodos de suspensão, podes comparar a carga antes e depois; não há amostragem contínua nem cálculo de energia durante esse intervalo. O histórico de jogos também mostra a estimativa de energia de cada jogo.
 
 No menu de acesso rápido (QAM) também vês a carga atual, o fluxo de energia pequeno e os detalhes da bateria, e podes ligar ou desligar o limite de carga da Steam. Durante o carregamento, quando o sistema tem uma estimativa, também podes ver aproximadamente quanto falta até ficar cheia.
+
+O **Modo de navegação** fica abaixo das informações da bateria na página de energia e bateria, não no QAM, e está desligado por predefinição. Ativa primeiro o limite da Steam, que define o limiar superior. Com o modo desligado, ajusta Delta em pontos percentuais; o limiar inferior é calculado como o superior menos Delta, não é definido separadamente. Por exemplo, um limite de 80% e Delta de 10 pontos dão um limiar inferior de 70%. Ao ativar ou voltar a ligar a alimentação dentro do intervalo, espera; ao atingir o limiar inferior, pede carga e mantém-na até ao superior. Não descarrega ativamente a bateria.
+
+O controlo corre em segundo plano, independentemente das páginas abertas. Desligar o modo ou descarregar o plugin restaura o limite de hardware anterior; mudar as definições da Steam termina o controlo sem substituir o novo valor. Durante a suspensão fica apenas o último limite de hardware, não um controlo de dois limiares no firmware. A validação física do ciclo completo, suspensão/retoma e reinício continua pendente; os testes unitários não a substituem.
+
+Seleciona **Ordem dos componentes do QAM** no fundo para ordenar os 10 componentes na própria página, sem abrir outra janela. Usa cima/baixo para escolher, **A** para pegar, cima/baixo para mover e **A** para largar. **B** desfaz o movimento atual; sem componente levantado, cancela todo o rascunho. **X** guarda e sai; **Y** repõe a ordem predefinida no rascunho. O rodapé nativo também mostra as teclas equivalentes. Durante a ordenação, o conteúdo continua visível, mas as ações normais ficam desativadas; com toque ou rato, seleciona o componente e usa os botões de movimento no próprio bloco. Os componentes ocultos mantêm uma posição identificada. A ordem guardada fica nesta Deck e os novos componentes são acrescentados no fim.
 
 <h2 id="install">Instalar</h2>
 
@@ -63,6 +69,8 @@ O serviço corre como root para ler o hardware. Não altera sozinho a política 
 Para atualizar, descarrega o novo ZIP `power-timeline-` na mesma página da release mais recente e instala-o outra vez com os passos acima.
 
 A desinstalação faz-se em Plugins, nas definições do Decky. Desinstalar não apaga o histórico. O histórico fica normalmente em `~/homebrew/data/power-timeline/`. Para apagar também o histórico, podes apagar essa pasta de dados.
+
+O histórico usa colunas numéricas nativas de SQLite, um dicionário de texto e tabelas relacionais de erros e motivos, em vez de JSON por amostra. Ao atualizar uma base JSON antiga, valida uma nova base separada e guarda uma cópia completa `timeline.pre-typed-*.sqlite3` antes da troca atómica, sem reduzir a precisão. Desde 0.3.3, a base ativa tem um limite de 256 MiB: quando fica cheia, remove o lote mais antigo por ordem de registo e os dados relacionados, reutiliza as páginas livres e continua a registar. As sessões cortadas são indicadas como parciais e só somam os intervalos conservados; mantém-se a última amostra. As cópias de segurança não são apagadas automaticamente; estas e os diários de transações ocupam espaço adicional. Para voltar a uma versão antiga, para o plugin e restaura também a base antiga correspondente, não apenas o código.
 
 <h2 id="try-it">Primeira utilização</h2>
 
@@ -103,7 +111,7 @@ A estimativa de energia do jogo cobre a energia de CPU e GPU que pode ser repart
 
 Segue o idioma da interface da Steam até escolheres um.
 
-Podes escolher chinês simplificado, inglês, português, espanhol, japonês e coreano. Há uma fila de bandeiras no fundo do menu de acesso rápido e de cada página. Esquerda, direita ou um deslize horizontal só movem o destaque. Confirmar muda o idioma. A frase usa o idioma dessa bandeira. A escolha fica guardada.
+Podes escolher chinês simplificado, inglês, português, espanhol, japonês e coreano. Por predefinição, as bandeiras ficam perto do fundo do menu de acesso rápido; nas páginas completas continuam no fundo. Esquerda, direita ou um deslize horizontal só movem o destaque. Confirmar muda o idioma. A frase usa o idioma dessa bandeira. A escolha fica guardada.
 
 Este documento existe nas mesmas seis línguas. Usa as ligações no topo.
 
@@ -139,4 +147,4 @@ python3 -m unittest discover -s tests -v
 
 ## Licença
 
-[BSD 3-Clause](./LICENSE). Copyright (c) 2026, Zachary. Este é um plugin independente, não um projeto oficial da Valve, do SteamOS ou do Decky.
+[BSD 3-Clause](../../LICENSE). Copyright (c) 2026, Zachary. Este é um plugin independente, não um projeto oficial da Valve, do SteamOS ou do Decky.

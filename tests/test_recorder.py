@@ -1,13 +1,14 @@
 """Boundary regressions using actual SQLite and recorder session transitions."""
 
-import json
+from concurrent.futures import ThreadPoolExecutor
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from threading import Event
 
 from py_modules.recorder import Recorder
-from py_modules.storage import StorageFullError
+from py_modules.storage import SampleReader, StorageFullError, intern_string
 
 
 def sample(t, power=12.0, **changes):
@@ -121,12 +122,14 @@ class RecorderTests(unittest.TestCase):
         self.recorder.ingest(sample(1, 0, cpu_w=None, errors={"cpu": "unavailable"}), [game()], estimate())
         self.recorder.ingest(sample(18985.366, None, monotonic=104.434, cpu_w=0), [game()], estimate())
         after_id = self.recorder.previous_id
-        # Reproduce the payload written by the old wall-first discontinuity rule.
+        # Retain the label written by the old wall-first discontinuity rule.
         after = dict(self.recorder.snapshot()["sample"], break_reason="clock_discontinuity")
         with self.recorder.db:
-            self.recorder.db.execute("UPDATE samples SET payload=? WHERE id=?", (json.dumps(after), after_id))
+            self.recorder.db.execute("UPDATE samples SET break_reason_id=? WHERE id=?",
+                                     (intern_string(self.recorder.db, "clock_discontinuity"), after_id))
         self.recorder.ingest(sample(18986.366, monotonic=105.434), [game()], estimate())
-        stored = [json.loads(row[0]) for row in self.recorder.db.execute("SELECT payload FROM samples ORDER BY id")]
+        reader = SampleReader(self.recorder.db)
+        stored = [reader.decode(row) for row in self.recorder.db.execute("SELECT * FROM samples ORDER BY id")]
         before, after = stored[1:3]
         history = self.recorder.game_history("10")
         database = list(self.recorder.db.iterdump())
@@ -171,8 +174,8 @@ class RecorderTests(unittest.TestCase):
         self.recorder.ingest(sample(10, boottime=101), [], {})
         after = dict(self.recorder.snapshot()["sample"], break_reason="suspend")
         with self.recorder.db:
-            self.recorder.db.execute("UPDATE samples SET payload=? WHERE id=?",
-                                     (json.dumps(after), self.recorder.previous_id))
+            self.recorder.db.execute("UPDATE samples SET break_reason_id=? WHERE id=?",
+                                     (intern_string(self.recorder.db, "suspend"), self.recorder.previous_id))
         changes = self.recorder.db.total_changes
         timeline = self.recorder.timeline(1000, 1010)
         self.assertEqual(timeline["points"][-1], after)
@@ -435,6 +438,83 @@ class RecorderTests(unittest.TestCase):
         self.assertEqual(len(self.recorder.timeline(1000, 1001)["points"]), 1)
         with self.assertRaises(RuntimeError):
             self.recorder.ingest(sample(2), [], {})
+
+    def test_busy_commit_rolls_back_new_dictionary_entries_before_retry(self):
+        self.recorder.ingest(sample(0), [], {})
+        self.recorder.db.execute("PRAGMA busy_timeout=0")
+        blocker = sqlite3.connect(self.recorder.storage.path)
+        try:
+            blocker.execute("BEGIN")
+            blocker.execute("SELECT * FROM samples").fetchall()
+            next_sample = sample(1, battery_state="Reporting", errors={"new sensor": "未就绪"})
+            with self.assertRaises(sqlite3.OperationalError) as failed:
+                self.recorder.ingest(next_sample, [], {})
+            self.assertEqual(failed.exception.sqlite_errorcode, sqlite3.SQLITE_BUSY)
+            self.assertEqual(self.recorder.snapshot()["status"], "recording")
+            self.assertEqual(self.recorder.snapshot()["sample"]["timestamp"], 1000)
+            blocker.rollback()
+            self.recorder.ingest(next_sample, [], {})
+            points = self.recorder.timeline(1000, 1001)["points"]
+            self.assertEqual([point["timestamp"] for point in points], [1000, 1001])
+            self.assertEqual(points[-1]["errors"], {"new sensor": "未就绪"})
+            self.assertEqual(points[-1]["battery_state"], "Reporting")
+        finally:
+            blocker.close()
+
+    def test_history_snapshot_is_readonly_and_does_not_block_new_samples(self):
+        self.recorder.ingest(sample(0), [game()], {})
+        self.recorder.ingest(sample(1), [game()], estimate())
+        ready, resume = Event(), Event()
+        connections = []
+
+        def query(reader):
+            connections.append(reader.db)
+            before = reader.timeline(1000, 1002)
+            with self.assertRaisesRegex(sqlite3.OperationalError, "readonly"):
+                reader.db.execute("DELETE FROM samples")
+            ready.set()
+            if not resume.wait(5):
+                raise TimeoutError("writer did not release the reader")
+            return before, reader.timeline(1000, 1002)
+
+        self.recorder.db.execute("PRAGMA busy_timeout=0")
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(self.recorder.read_history, query)
+            try:
+                self.assertTrue(ready.wait(5))
+                self.recorder.ingest(sample(2), [game()], estimate())
+            finally:
+                resume.set()
+            before, after = future.result(timeout=5)
+        self.assertEqual([point["timestamp"] for point in before["points"]], [1000, 1001])
+        self.assertEqual(after, before)
+        self.assertEqual(self.recorder.timeline(1000, 1002)["coverage_seconds"], 2)
+        with self.assertRaises(sqlite3.ProgrammingError):
+            connections[0].execute("SELECT 1")
+
+    def test_history_error_closes_snapshot_and_keeps_writer_usable(self):
+        self.recorder.ingest(sample(0), [], {})
+        connections = []
+
+        def invalid_range(reader):
+            connections.append(reader.db)
+            return reader.timeline(1002, 1000)
+
+        with self.assertRaises(ValueError):
+            self.recorder.read_history(invalid_range)
+        with self.assertRaises(sqlite3.ProgrammingError):
+            connections[0].execute("SELECT 1")
+        self.recorder.ingest(sample(1), [], {})
+        self.assertEqual(self.recorder.timeline(1000, 1001)["coverage_seconds"], 1)
+
+    def test_supply_events_without_segment_break_respect_query_boundaries(self):
+        self.recorder.ingest(sample(0), [], {})
+        self.recorder.ingest(sample(1, supply="external"), [], {})
+        self.recorder.ingest(sample(2), [], {})
+        events = self.recorder.timeline(1000.5, 1001.5)["events"]
+        self.assertEqual(events, [{"kind": "supply", "timestamp": 1001, "end": None, "label": "external"}])
+        events = self.recorder.timeline(1001.5, 1002)["events"]
+        self.assertEqual(events, [{"kind": "supply", "timestamp": 1002, "end": None, "label": "battery"}])
 
     def test_five_minute_buckets_keep_one_point_and_break_gaps(self):
         from py_modules.recorder import bucket_series

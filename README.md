@@ -7,7 +7,7 @@
 Power Timeline is a Decky plugin for Steam Deck. It lets you compare the battery’s full-charge capacity with its design capacity and puts battery level, game activity, and sleep periods on a single timeline. See how much energy your battery can hold now, then look back at when its charge was used. Recording continues after you close the page.
 
 <p align="center">
-  <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
+  <a href="./README.md">English</a> · <a href="./docs/readme/README.zh-CN.md">简体中文</a> · <a href="./docs/readme/README.pt.md">Português</a> · <a href="./docs/readme/README.es.md">Español</a> · <a href="./docs/readme/README.ja.md">日本語</a> · <a href="./docs/readme/README.ko.md">한국어</a>
 </p>
 <p align="center">
   <a href="#what">What you see</a> · <a href="#install">Install</a> · <a href="#try-it">First use</a> · <a href="#limits">Please note</a> · <a href="#language">Language</a> · <a href="./CHANGELOG.md">Changelog</a>
@@ -29,6 +29,12 @@ Compare the current full-charge capacity, design capacity, and capacity ratio fo
 Look back over the last 1, 3, or 7 days of battery level alongside game activity, power-source changes, and sleep periods to see when the charge dropped and what was happening then. For sleep periods, you can compare the battery levels before and after sleep; there is no continuous sampling or energy calculation during that interval. Game history also shows each game’s energy estimate.
 
 The Quick Access menu (QAM) also shows the current battery level, a small power-flow picture, and battery details, and lets you turn Steam’s charge limit on or off. While charging, when the system provides an estimate, you can also see about how long until full.
+
+**Sailing Mode** is below the battery information on the **Power and battery** page, not in QAM, and is off by default. Enable Steam's charge limit first; it supplies the upper threshold. With Sailing Mode off, set Delta in percentage points; the lower threshold is calculated as the upper threshold minus Delta, not set separately. For example, an 80% upper limit and a 10-point Delta give a 70% lower limit. The controller waits when enabled or reconnected inside the interval, requests charging at or below the lower threshold, and keeps charging until the upper threshold. It does not actively discharge the battery.
+
+The backend runs independently of open pages. Disabling the mode or unloading the plugin restores its previous hardware limit; changing Steam's charge settings ends control without overwriting the new setting. During sleep only the last hardware limit remains: this is not firmware-level dual-threshold control. Full physical charge-cycle, sleep/wake, and reboot acceptance is still pending; unit tests do not establish those behaviors on the device.
+
+Select **QAM component order** at the bottom to sort all 10 components directly on the QAM page, without a separate dialog. Use up/down to select a component, **A** to pick it up, up/down to move it, then **A** to put it down. **B** undoes the current lift; when nothing is lifted it cancels the entire draft. **X** saves and exits, and **Y** restores the default draft. Native keyboard hints are shown as well. While sorting, the component contents remain visible but their normal actions are disabled; touch/mouse users can tap a component and use its inline movement buttons. Hidden components retain a named slot. Saving remembers the order on this Deck, and new components are appended to saved orders.
 
 <h2 id="install">Install</h2>
 
@@ -63,6 +69,8 @@ The backend runs as root so it can read hardware. It does not change system powe
 To update, download the new `power-timeline-` ZIP from the same latest-release page and install it again with the steps above.
 
 Uninstall from Plugins in Decky's settings. Uninstalling does not delete history. History is usually in `~/homebrew/data/power-timeline/`. To clear the history as well, you can delete that data directory.
+
+History uses native SQLite numeric columns, a string dictionary, and relational error/reason tables, not per-sample JSON. Upgrading an old JSON database validates a separate new database and keeps a complete `timeline.pre-typed-*.sqlite3` backup before switching atomically, without reducing sampling precision. Since 0.3.3, the active database is capped at 256 MiB: when full, it evicts the oldest batch in ingestion order together with related records, reuses freed pages, and keeps recording. Truncated sessions are marked partial and their energy totals cover only retained intervals; the latest sample endpoint is kept. Rollback backups are not automatically deleted; backups and transaction journals use additional disk space. Before downgrading, stop the plugin and restore the matching old database backup as well—do not downgrade only the code.
 
 <h2 id="try-it">First use</h2>
 
@@ -103,7 +111,7 @@ The game-energy estimate covers CPU and GPU energy that can be split by process 
 
 It follows Steam's interface language until you choose one.
 
-You can choose Simplified Chinese, English, Portuguese, Spanish, Japanese, and Korean. A row of flags sits at the bottom of the Quick Access menu and of every full page. Left, right, or a sideways swipe only moves the highlight. Confirm switches the language. The hint uses that flag's language. The choice is remembered.
+You can choose Simplified Chinese, English, Portuguese, Spanish, Japanese, and Korean. By default, a row of flags sits near the bottom of the Quick Access menu; on full pages it stays at the bottom. Left, right, or a sideways swipe only moves the highlight. Confirm switches the language. The hint uses that flag's language. The choice is remembered.
 
 This document is in the same six languages. Use the links at the top.
 

@@ -187,10 +187,11 @@ export function ChargeLimit({ active, percent, charging }: { active: boolean; pe
   if (on === null || !writeEnabled.current) return null;
   return <>
     <style>{`
-      .pt-qam-charge-bar { position: relative; height: 36px; margin: 6px 0 22px; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+      .pt-qam-charge-bar { position: relative; height: 24px; margin: 4px 0 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
       .pt-qam-charge-bar.gpfocus, .pt-qam-charge-bar.gpfocuswithin, .pt-qam-charge-bar:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.5); outline-offset: 2px; }
-      .pt-qam-charge-hit { position: absolute; inset: 0; border-radius: 18px; border: 0; background: rgba(255,255,255,0.16); box-shadow: 0 6px 16px rgba(0,0,0,0.45); backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2); touch-action: pan-y; cursor: pointer; user-select: none; -webkit-user-select: none; overflow: visible; }
-      .pt-qam-charge-fill { position: absolute; inset: 0 auto 0 0; border-radius: 18px; background: rgba(123,220,197,0.72); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); }
+      .pt-qam-charge-hit { position: absolute; inset: 0; border-radius: 12px; border: 0; background: rgba(255,255,255,0.16); box-shadow: 0 6px 16px rgba(0,0,0,0.45); backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2); touch-action: pan-y; cursor: pointer; user-select: none; -webkit-user-select: none; overflow: visible; }
+      .pt-qam-charge-hit::before { content: ""; position: absolute; inset: -4px 0; }
+      .pt-qam-charge-fill { position: absolute; inset: 0 auto 0 0; border-radius: 12px; background: rgba(123,220,197,0.72); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); }
       .pt-qam-charge-fill-low { background: rgba(229,72,77,0.88); }
       .pt-qam-charge-fill-idle { background: rgba(255,255,255,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16); }
       .pt-qam-charge-icons { position: absolute; top: 0; bottom: 0; z-index: 1; display: flex; align-items: center; gap: 2px; transform: translateX(-50%); pointer-events: none; color: #fff; }
@@ -203,6 +204,15 @@ export function ChargeLimit({ active, percent, charging }: { active: boolean; pe
       .pt-qam-limit-title { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; }
       .pt-qam-limit-note { font-size: 11px; line-height: 15px; color: color-mix(in srgb, #fff 62%, transparent); }
     `}</style>
+    <PanelSectionRow>
+      <Focusable className="pt-qam-limit">
+        <div className="pt-qam-limit-copy">
+          <div className="pt-qam-limit-title"><FaBolt aria-hidden="true" />{t("qam.chargeLimit")}</div>
+          <div className="pt-qam-limit-note">{on ? t("qam.chargeStop", { limit: limit ?? "—" }) : t("qam.chargeUnlimited")}</div>
+        </div>
+        <Toggle aria-label={t("qam.chargeLimit")} value={on} onChange={(value) => { pendingEnabled.current = { value, until: Date.now() + 3000 }; setOn(value); writeEnabled.current?.(value); }} />
+      </Focusable>
+    </PanelSectionRow>
     {level != null && <PanelSectionRow>
       {/* @ts-expect-error Steam 导航树要显式 focusable，Decky 的 Focusable 类型没声明这个属性。 */}
       <Focusable focusable
@@ -325,14 +335,5 @@ export function ChargeLimit({ active, percent, charging }: { active: boolean; pe
         </div>
       </Focusable>
     </PanelSectionRow>}
-    <PanelSectionRow>
-      <Focusable className="pt-qam-limit">
-        <div className="pt-qam-limit-copy">
-          <div className="pt-qam-limit-title"><FaBolt aria-hidden="true" />{t("qam.chargeLimit")}</div>
-          <div className="pt-qam-limit-note">{on ? t("qam.chargeStop", { limit: limit ?? "—" }) : t("qam.chargeUnlimited")}</div>
-        </div>
-        <Toggle aria-label={t("qam.chargeLimit")} value={on} onChange={(value) => { pendingEnabled.current = { value, until: Date.now() + 3000 }; setOn(value); writeEnabled.current?.(value); }} />
-      </Focusable>
-    </PanelSectionRow>
   </>;
 }

@@ -1,15 +1,16 @@
 """Observed sessions and measured intervals; graphs never drive the ledger."""
 
-import json
+from contextlib import closing
+from copy import copy
 import math
 import sqlite3
 import uuid
 from pathlib import Path
 
-from .storage import Storage, StorageFullError
+from .storage import (INSERT_SAMPLE, NUMERIC_FIELDS, SampleReader, Storage, StorageFullError,
+                      merge_session_reasons, sample_values, set_session_reasons)
 
 MODEL = "activity-weighted-v1"
-NUMERIC_FIELDS = ("battery_percent", "battery_w", "system_w", "apu_w", "cpu_w", "soc_w", "gpu_w")
 
 
 def number(value):
@@ -122,11 +123,14 @@ class ChargeHistory:
     def restore(self, connection):
         self.previous, self.ended = None, None
         self.reason = "charge_end_unobserved"
-        row = connection.execute("SELECT id FROM samples WHERE lower(json_extract(payload,'$.battery_state'))='charging' ORDER BY id DESC LIMIT 1").fetchone()
+        row = connection.execute("SELECT s.id FROM samples s JOIN strings d ON d.id=s.battery_state_id "
+                                 "WHERE lower(d.value)='charging' ORDER BY s.id DESC LIMIT 1").fetchone()
+        query = ("SELECT s.timestamp,s.monotonic,s.boottime,d.value AS battery_state "
+                 "FROM samples s JOIN strings d ON d.id=s.battery_state_id ")
         if row:
-            rows = connection.execute("SELECT timestamp,monotonic,boottime,json_extract(payload,'$.battery_state') AS battery_state FROM samples WHERE id>=? ORDER BY id", (row["id"],))
+            rows = connection.execute(query + "WHERE s.id>=? ORDER BY s.id", (row["id"],))
         else:
-            rows = connection.execute("SELECT timestamp,monotonic,boottime,json_extract(payload,'$.battery_state') AS battery_state FROM samples ORDER BY id DESC LIMIT 1")
+            rows = connection.execute(query + "ORDER BY s.id DESC LIMIT 1")
         for sample in rows:
             self.observe(sample)
 
@@ -204,12 +208,11 @@ class Recorder:
             raise RuntimeError("recorder already started")
         try:
             self.db = self.storage.open()
-            with self.db:
-                self.db.execute("UPDATE sessions SET status='interrupted', ended_at=last_seen WHERE status='active'")
+            self.storage.write(lambda: self.db.execute("UPDATE sessions SET status='interrupted', ended_at=last_seen WHERE status='active'"))
             self.segment = self.db.execute("SELECT COALESCE(MAX(segment), 0) + 1 FROM samples").fetchone()[0]
             self.names = {row["game_id"]: row["name"] for row in self.db.execute("SELECT * FROM games")}
-            row = self.db.execute("SELECT payload FROM samples ORDER BY id DESC LIMIT 1").fetchone()
-            self.latest = json.loads(row[0]) if row else None
+            row = self.db.execute("SELECT * FROM samples ORDER BY id DESC LIMIT 1").fetchone()
+            self.latest = SampleReader(self.db).decode(row) if row else None
             self.charging.restore(self.db)
             self.previous = None
             self.previous_id = None
@@ -227,8 +230,20 @@ class Recorder:
         if self.db is None:
             raise RuntimeError("recorder is not started")
 
+    def read_history(self, query, *args):
+        """Worker-owned snapshot: long reads must not pin the DELETE-journal writer."""
+        self._require_db()
+        reader = copy(self)
+        with closing(sqlite3.connect(":memory:")) as snapshot:
+            with closing(sqlite3.connect(self.storage.path.resolve().as_uri() + "?mode=ro", uri=True)) as source:
+                source.backup(snapshot, pages=256)
+            snapshot.row_factory = sqlite3.Row
+            snapshot.execute("PRAGMA query_only=ON")
+            reader.db = snapshot
+            return query(reader, *args)
+
     def _storage_error(self, exc):
-        message = ("storage-full: recording stopped; retained history is not deleted"
+        message = ("storage-full: write cannot fit within the storage limit"
                    if isinstance(exc, StorageFullError) or getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_FULL
                    else str(exc))
         self.fail(message)
@@ -249,6 +264,10 @@ class Recorder:
         self.revision += 1
 
 
+    def _retention_changed(self):
+        self.names = {row["game_id"]: row["name"] for row in self.db.execute("SELECT * FROM games")}
+        self.charging.restore(self.db)
+
     def observe_games(self, games):
         self._require_db()
         names = {}
@@ -267,9 +286,10 @@ class Recorder:
         if self.status != "recording":
             raise RuntimeError(self.error or "recording stopped")
         try:
-            self.storage.ensure_room()
-            with self.db:
-                self.db.executemany("INSERT INTO games VALUES (?,?) ON CONFLICT(game_id) DO UPDATE SET name=excluded.name", names.items())
+            _, trimmed = self.storage.write(lambda: self.db.executemany(
+                "INSERT INTO games VALUES (?,?) ON CONFLICT(game_id) DO UPDATE SET name=excluded.name", names.items()))
+            if trimmed:
+                self._retention_changed()
             self.names.update(names)
             self.revision += 1
         except (sqlite3.Error, StorageFullError) as exc:
@@ -319,16 +339,12 @@ class Recorder:
             return
         reason = discontinuity(self.previous, sample, self.sample_interval) if self.previous else "recording_start"
         segment = self.segment + (1 if reason and self.previous else 0)
+        sample.update(segment=segment, break_reason=reason)
         wire = {key: value for key, value in sample.items() if key not in ("monotonic", "boottime")}
-        wire.update(segment=segment, break_reason=reason)
-        active = {}
         try:
-            self.storage.ensure_room()
-            with self.db:
-                sample_id = self.db.execute(
-                    "INSERT INTO samples(timestamp,monotonic,boottime,segment,payload) VALUES (?,?,?,?,?)",
-                    (sample["timestamp"], sample["monotonic"], sample["boottime"], segment, json.dumps(wire)),
-                ).lastrowid
+            def record():
+                active = {}
+                sample_id = self.db.execute(INSERT_SAMPLE, sample_values(self.db, sample)).lastrowid
                 for game_id, old in self.active.items():
                     surviving = game_id in games and bool(old["identities"] & games[game_id]["identities"])
                     if reason or not surviving:
@@ -339,15 +355,16 @@ class Recorder:
                     surviving = old and not reason and bool(old["identities"] & game["identities"])
                     if surviving:
                         session_id = old["session_id"]
-                        self.db.execute("UPDATE sessions SET last_seen=?,battery_start=COALESCE(battery_start,?),battery_end=COALESCE(?,battery_end) WHERE session_id=?",
-                                        (sample["timestamp"], sample["battery_percent"], sample["battery_percent"], session_id))
+                        self.db.execute("UPDATE sessions SET last_seen=?,battery_start=COALESCE(battery_start,?),battery_end=COALESCE(?,battery_end),last_sample_id=? WHERE session_id=?",
+                                        (sample["timestamp"], sample["battery_percent"], sample["battery_percent"], sample_id, session_id))
                     else:
                         session_id = str(uuid.uuid4())
                         self.db.execute("INSERT INTO games VALUES (?,?) ON CONFLICT(game_id) DO NOTHING", (game_id, game["name"]))
-                        self.db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?)",
+                        self.db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                                         (session_id, game_id, sample["timestamp"], sample["timestamp"], None,
-                                         "active", int(bool(reason)), sample["battery_percent"], sample["battery_percent"],
-                                         json.dumps(["observed_mid_run"] if reason else [])))
+                                         "active", int(bool(reason)), sample["battery_percent"], sample["battery_percent"], sample_id, sample_id))
+                        if reason:
+                            set_session_reasons(self.db, session_id, ["observed_mid_run"])
                     active[game_id] = {"session_id": session_id, "identities": game["identities"]}
                 if self.previous is not None and not reason:
                     seconds = sample["monotonic"] - self.previous["monotonic"]
@@ -379,13 +396,17 @@ class Recorder:
                         self.db.execute("INSERT INTO session_intervals VALUES (?,?,?,?,?)",
                                         (interval_id, game["session_id"], system_wh, *values))
                         if reasons:
-                            row = self.db.execute("SELECT reasons FROM sessions WHERE session_id=?", (game["session_id"],)).fetchone()
-                            self.db.execute("UPDATE sessions SET reasons=? WHERE session_id=?",
-                                            (json.dumps(sorted(set(json.loads(row[0])) | reasons)), game["session_id"]))
+                            merge_session_reasons(self.db, game["session_id"], reasons)
+                return sample_id, active
+
+            (sample_id, active), trimmed = self.storage.write(record)
             self.previous, self.previous_id, self.active = sample, sample_id, active
             self.segment, self.latest = segment, wire
             self.revision += 1
-            self.charging.observe(sample)
+            if trimmed:
+                self._retention_changed()
+            else:
+                self.charging.observe(sample)
         except sqlite3.OperationalError as exc:
             if exc.sqlite_errorcode == sqlite3.SQLITE_BUSY or "locked" in str(exc).lower():
                 raise
@@ -398,8 +419,7 @@ class Recorder:
     def close(self):
         try:
             if self.db is not None:
-                with self.db:
-                    self.db.execute("UPDATE sessions SET status='interrupted', ended_at=last_seen WHERE status='active'")
+                self.storage.write(lambda: self.db.execute("UPDATE sessions SET status='interrupted', ended_at=last_seen WHERE status='active'"))
         except sqlite3.Error as exc:
             self._storage_error(exc)
             raise
@@ -445,13 +465,20 @@ class Recorder:
             where.append("s.status='active'")
         rows = self.db.execute("SELECT s.*,g.name FROM sessions s JOIN games g USING(game_id)" +
                                (" WHERE " + " AND ".join(where) if where else ""), params).fetchall()
+        reasons = {}
+        if rows:
+            query = ("SELECT r.session_id,d.value FROM session_reasons r JOIN strings d ON d.id=r.reason_id "
+                     "JOIN sessions s ON s.session_id=r.session_id" +
+                     (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY r.session_id,r.position")
+            for session, reason in self.db.execute(query, params):
+                reasons.setdefault(session, []).append(reason)
         results = {}
         for row in rows:
             result = dict(row)
             if self.status == "error" and result["status"] == "active":
                 result["status"], result["ended_at"] = "interrupted", result["last_seen"]
             result["partial_start"] = bool(result["partial_start"])
-            result["reasons"] = json.loads(result["reasons"])
+            result["reasons"] = reasons.get(row["session_id"], [])
             result["model"] = MODEL
             for domain in ("system", "cpu", "gpu"):
                 result[domain + "_wh"], result[domain + "_seconds"] = None, 0.0
@@ -514,7 +541,8 @@ class Recorder:
 
     @staticmethod
     def _public_session(session):
-        return {key: value for key, value in session.items() if not key.startswith("_")}
+        return {key: value for key, value in session.items()
+                if not key.startswith("_") and key not in ("first_sample_id", "last_sample_id")}
 
     def snapshot(self):
         return {"epoch": self.epoch, "revision": self.revision, "status": self.status,
@@ -528,11 +556,12 @@ class Recorder:
         if start is None or end is None:
             raise ValueError("timeline requires start and end")
         validate_points(max_points)
+        reader = SampleReader(self.db)
         def read_points():
             for row in self.db.execute(
-                "SELECT payload FROM samples WHERE timestamp>=? AND timestamp<=? ORDER BY timestamp,id", (start, end)
+                "SELECT * FROM samples WHERE timestamp>=? AND timestamp<=? ORDER BY timestamp,id", (start, end)
             ):
-                yield json.loads(row[0])
+                yield reader.decode(row)
         if bucket_seconds is None:
             points = downsample(read_points, max_points)
         else:
@@ -542,15 +571,18 @@ class Recorder:
         events = []
         # Use ingestion order, not wall-clock ordering, to describe clock jumps honestly.
         for row in self.db.execute(
-            "SELECT c.payload,c.timestamp,c.monotonic,c.boottime,p.payload AS previous,"
+            "SELECT c.*,p.id AS previous_id,"
             "p.timestamp AS previous_timestamp,p.monotonic AS previous_monotonic,"
             "p.boottime AS previous_boottime FROM samples c LEFT JOIN samples p "
             "ON p.id=(SELECT MAX(id) FROM samples WHERE id<c.id) "
-            "WHERE (c.timestamp>=? AND c.timestamp<=?) OR c.id="
-            "(SELECT id FROM samples WHERE timestamp>? ORDER BY timestamp,id LIMIT 1) ORDER BY c.id", (start, end, end)
+            "WHERE ((c.timestamp>=? AND c.timestamp<=?) OR c.id="
+            "(SELECT id FROM samples WHERE timestamp>? ORDER BY timestamp,id LIMIT 1)) "
+            "AND (c.break_reason_id IS NOT NULL OR c.supply_id IS NOT p.supply_id) "
+            "ORDER BY c.id", (start, end, end)
         ):
-            point = json.loads(row["payload"])
-            previous = json.loads(row["previous"]) if row["previous"] else None
+            point = reader.decode(row)
+            previous_row = self.db.execute("SELECT * FROM samples WHERE id=?", (row["previous_id"],)).fetchone() if row["previous_id"] is not None else None
+            previous = reader.decode(previous_row) if previous_row is not None else None
             if point["break_reason"] is not None:
                 old_time = previous["timestamp"] if previous else point["timestamp"]
                 gap_start, gap_end = min(old_time, point["timestamp"]), max(old_time, point["timestamp"])

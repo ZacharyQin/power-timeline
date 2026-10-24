@@ -107,6 +107,7 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
   return <figure className={`pt-flow-chart${compact ? " pt-flow-mini" : ""}`} style={{ margin: 0 }}>
     <style>{`
       .pt-flow-chart { width: 100%; min-width: 0; box-sizing: border-box; flex-shrink: 0; --pt-flow-surface: color-mix(in srgb, currentColor 6%, transparent); --pt-flow-muted: color-mix(in srgb, currentColor 72%, transparent); }
+      .pt-flow-chart.pt-flow-mini { color: ${semanticColors.apu}; --pt-flow-surface: color-mix(in srgb, currentColor 14%, transparent); --pt-flow-muted: currentColor; }
       .pt-flow-chart svg { display: block; width: 100%; height: auto; flex-shrink: 0; overflow: visible; }
       .pt-flow-chart text { font-family: inherit; font-variant-numeric: tabular-nums; }
       .pt-flow-chart figcaption { font-size: 13px; line-height: 20px; opacity: .78; margin-top: 4px; }
@@ -116,10 +117,10 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
     `}</style>
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={batteryAssist ? t("flow.ariaAssist", { source: sourceLabel, caption }) : t("flow.ariaSplit", { source: sourceLabel, battery: external ? t("flow.ariaBattery") : "", caption })} style={{ "--pt-flow-end": `${width + 160}px` } as CSSProperties}>
       <defs>
-        <linearGradient id={`${id}-input`}><stop stopColor={sourceKind === "plug" ? semanticColors.warning : sourceKind === "battery" ? semanticColors.battery : "currentColor"} stopOpacity=".30" /><stop offset="1" stopColor={semanticColors.system} stopOpacity=".14" /></linearGradient>
-        <linearGradient id={`${id}-apu`}><stop stopColor={semanticColors.system} stopOpacity=".14" /><stop offset="1" stopColor={semanticColors.cpu} stopOpacity=".22" /></linearGradient>
-        <linearGradient id={`${id}-peripheral`}><stop stopColor="currentColor" stopOpacity=".08" /><stop offset="1" stopColor="currentColor" stopOpacity=".14" /></linearGradient>
-        <linearGradient id={`${id}-battery`}><stop stopColor={semanticColors.system} stopOpacity=".12" /><stop offset="1" stopColor={semanticColors.battery} stopOpacity=".30" /></linearGradient>
+        <linearGradient id={`${id}-input`}><stop stopColor={sourceKind === "plug" ? semanticColors.warning : sourceKind === "battery" ? semanticColors.battery : "currentColor"} stopOpacity={compact ? .72 : .30} /><stop offset="1" stopColor={semanticColors.system} stopOpacity={compact ? .50 : .14} /></linearGradient>
+        <linearGradient id={`${id}-apu`}><stop stopColor={semanticColors.system} stopOpacity={compact ? .50 : .14} /><stop offset="1" stopColor={semanticColors.cpu} stopOpacity={compact ? .64 : .22} /></linearGradient>
+        <linearGradient id={`${id}-peripheral`}><stop stopColor="currentColor" stopOpacity={compact ? .32 : .08} /><stop offset="1" stopColor="currentColor" stopOpacity={compact ? .48 : .14} /></linearGradient>
+        <linearGradient id={`${id}-battery`}><stop stopColor={semanticColors.system} stopOpacity={compact ? .50 : .12} /><stop offset="1" stopColor={semanticColors.battery} stopOpacity={compact ? .72 : .30} /></linearGradient>
         <linearGradient id={`${id}-shine`}><stop stopColor="currentColor" stopOpacity="0" /><stop offset=".5" stopColor="currentColor" stopOpacity=".25" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient>
         <rect id={`${id}-trunk`} x={trunkX} y={trunkY} width={trunkWidth} height={trunkHeight} rx={compact ? 3 : 8} />
         {laidOut.map(b => <path key={b.shape} id={b.shape} d={b.path} />)}
@@ -140,7 +141,7 @@ export function PowerFlowChart({ flow, compact = false, active = true }: { flow:
       </g>
       <text x={trunkX + trunkWidth / 2} y={height / 2 + (compact ? 5 : 11)} textAnchor="middle" fontSize={compact ? 14 : 31} fontWeight="600" fill={flowColor(sourceValue)}>{flowWatts(sourceValue)}</text>
       {laidOut.map(b => <g key={b.shape} textAnchor="end">
-        <text x={compact ? endX - 2 : 660} y={b.center - (compact ? 4 : 12)} fontSize={compact ? 8.5 : 13} fill="var(--pt-flow-muted)">{b.label}{b.reverse ? " ←" : ""}</text>
+        <text x={compact ? endX - 2 : 660} y={b.center - (compact ? 5 : 12)} fontSize={compact ? 10 : 13} fontWeight={compact ? 600 : undefined} fill="var(--pt-flow-muted)">{b.label}{b.reverse ? " ←" : ""}</text>
         <text x={compact ? endX - 2 : 660} y={b.center + (compact ? 9 : 16)} fontSize={compact ? 11 : 24} fontWeight="600" fill={flowColor(b.value)}>{flowWatts(b.value, b.kind === "battery")}</text>
       </g>)}
     </svg>

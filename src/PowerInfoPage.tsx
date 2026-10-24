@@ -7,6 +7,7 @@ import { t } from "./i18n";
 import { useQuery } from "./data";
 import { PageQueryStatus, PageReading } from "./FullPage";
 import { chargeEstimateText, lastChargeReason, lastChargeText } from "./powerStatus";
+import { SailingControl } from "./SailingControl";
 
 function capacityText(charge: number | null, energy: number | null) {
   if (charge === null) return energy === null ? t("common.notReported") : valueText(energy, "Wh");
@@ -123,5 +124,6 @@ export function PowerInfoPage({ visible }: { visible: boolean }) {
       </section>}
       <Restrictions errors={info.errors} label={t("power.status")} />
     </div>}
+    <SailingControl />
   </>;
 }

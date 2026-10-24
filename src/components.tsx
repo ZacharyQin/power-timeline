@@ -29,6 +29,7 @@ const reasonDetails = {
   battery_missing_or_ambiguous: { group: "system", key: "reason.battery_missing_or_ambiguous" },
   external_supply_unavailable: { group: "system", key: "reason.external_supply_unavailable" },
   observed_mid_run: { group: "coverage", key: "reason.observed_mid_run" },
+  history_trimmed: { group: "coverage", key: "reason.history_trimmed" },
   first_process_observation: { group: "coverage", key: "reason.first_process_observation" },
   process_set_changed: { group: "coverage", key: "reason.process_set_changed" },
   cpu_interval_incomplete: { group: "coverage", key: "reason.cpu_interval_incomplete" },
@@ -122,8 +123,18 @@ export function SemanticStyles() {
     .pt-semantic-field.pt-semantic-disabled .pt-color { color: inherit; }
   `}</style>;
 }
+const timeFormats = new Map<string, Intl.DateTimeFormat>();
 export function timeText(timestamp: number, date = false) {
-  return new Date(timestamp * 1000).toLocaleString(numberLocale(), date ? { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" } : { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const value = new Date(timestamp * 1000);
+  if (Number.isNaN(value.getTime())) return value.toString();
+  const locale = numberLocale();
+  const key = `${locale}:${date}`;
+  let format = timeFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, date ? { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" } : { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    timeFormats.set(key, format);
+  }
+  return format.format(value);
 }
 export function durationText(seconds: number) {
   const minutes = Math.floor(Math.max(0, seconds) / 60);

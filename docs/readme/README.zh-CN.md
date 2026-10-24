@@ -7,13 +7,13 @@
 Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满充容量与设计容量，也把电量变化、游戏运行和休眠时段放在同一条时间线上。看看电池现在还能装多少电，再回头看看，这些电是什么时候用掉的。关掉页面以后，记录仍会继续。
 
 <p align="center">
-  <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
+  <a href="../../README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.pt.md">Português</a> · <a href="./README.es.md">Español</a> · <a href="./README.ja.md">日本語</a> · <a href="./README.ko.md">한국어</a>
 </p>
 <p align="center">
-  <a href="#what">能看到什么</a> · <a href="#install">安装</a> · <a href="#try-it">第一次使用</a> · <a href="#limits">请注意</a> · <a href="#language">语言</a> · <a href="./CHANGELOG.md">更新记录</a>
+  <a href="#what">能看到什么</a> · <a href="#install">安装</a> · <a href="#try-it">第一次使用</a> · <a href="#limits">请注意</a> · <a href="#language">语言</a> · <a href="../../CHANGELOG.md">更新记录</a>
 </p>
 <p align="center">
-  <img src="./docs/qam-menu.jpg" alt="快捷访问菜单里的 Power Timeline：电量、功率流小图、最近 24 小时和电池信息" width="640">
+  <img src="../qam-menu.jpg" alt="快捷访问菜单里的 Power Timeline：电量、功率流小图、最近 24 小时和电池信息" width="640">
 </p>
 
 这张图是插着电源时的快捷访问菜单。能看到当前电量、功率流小图、最近 24 小时和电池信息。图里的瓦数不是整机功率。
@@ -29,6 +29,12 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 回看最近 1、3、7 天的电量曲线，对照游戏运行、供电变化和休眠时段，看看哪一段掉电明显，当时在做什么。休眠区间可以对照前后电量，期间不连续采样，也不补算耗电。游戏记录里还可以查看各游戏的用电估算。
 
 快捷访问菜单（QAM）里还能看当前电量、功率流小图和电池信息，也可以开启或关闭 Steam 的充电限制。正在充电、并且系统给出估计时，还能看到大约还要多久充满。
+
+**航行模式**位于**电源与电池**内页的电量信息下方，不在 QAM 展示，默认关闭。先开启 Steam 充电限制，其限额作为上限；关闭航行模式后设置差异值 Delta（百分点），充电下限自动等于上限减去 Delta，不单独设置。例如上限 80%、Delta 为 10 个百分点时，下限为 70%。区间内启用或重新接电时等待，电量降至下限或以下才请求充电，随后持续充至上限，不主动放电。
+
+控制器在后台运行，不依赖页面常开。关闭模式或卸载运行中的插件时恢复接管前的硬件限额；修改 Steam 充电设置则退出接管，不覆盖新设置。休眠时仅保留最后写入的硬件上限，不等于固件双阈值控制。完整的真实充电循环、休眠唤醒和重启验收仍待完成，单元测试不能替代这些实机证据。
+
+在底部选择 **QAM 组件顺序**，直接在 QAM 原页面调整全部 10 个展示块，不另开弹窗。上下选择组件，按 **A** 抬起，上下移动，再按 **A** 放下。**B** 撤销本次抬起移动；未抬起时取消整次排序。**X** 保存并退出，**Y** 将草稿恢复默认，键盘对应操作由原生底栏提示。排序时保留组件原貌，但禁用其原有操作；触摸或鼠标可点选组件，再用块内的移动按钮。暂时隐藏的组件保留带名称的位置。保存后在本机记住，新增组件追加在已保存顺序的末尾。
 
 <h2 id="install">安装</h2>
 
@@ -63,6 +69,8 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 更新时，从同一个最新 Release 页面下载新的 `power-timeline-` ZIP，再按上面的步骤装一次。
 
 卸载在 Decky 设置的「插件」里进行。卸载不删除历史。历史一般在 `~/homebrew/data/power-timeline/`。如需同时清除历史记录，可删除该数据目录。
+
+历史使用 SQLite 原生数值列、字符串字典及错误／原因关联表，不再逐条保存 JSON。旧 JSON 库首次升级时先生成并检查旁路新库，保留完整 `timeline.pre-typed-*.sqlite3` 备份后原子切换，不降低采样精度。自 0.3.3 起，活动库上限固定为 256 MiB；满额时按入库先后滚动移除最旧的一批记录及关联数据，复用空闲页并继续录制，不再满额停录。被截断的会话标记为部分记录，耗电只统计仍保留的区间；最新采样端点保留。回滚备份不自动删除，备份与事务日志另占磁盘空间。回退旧插件前应停用插件，并同时恢复对应的旧库备份，不能只降级代码。
 
 <h2 id="try-it">第一次使用</h2>
 
@@ -103,7 +111,7 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 
 默认跟随 Steam 的界面语言，直到你自己选一种。
 
-可以选择简体中文、英语、葡萄牙语、西班牙语、日语和韩语。快捷访问菜单和每个内页的底部有一排国旗。左右方向键或横向滑动只移动高亮，按确认键才切换。提示用那面旗子的语言。选过以后会记住。
+可以选择简体中文、英语、葡萄牙语、西班牙语、日语和韩语。快捷访问菜单默认在靠近底部的位置显示国旗，内页的国旗仍在底部。左右方向键或横向滑动只移动高亮，按确认键才切换。提示用那面旗子的语言。选过以后会记住。
 
 这份说明也是这六种语言，用顶部的链接切换。
 
@@ -139,4 +147,4 @@ python3 -m unittest discover -s tests -v
 
 ## 许可证
 
-[BSD 3-Clause](./LICENSE)。Copyright (c) 2026, Zachary。这是独立插件，不是 Valve、SteamOS 或 Decky 的官方项目。
+[BSD 3-Clause](../../LICENSE)。Copyright (c) 2026, Zachary。这是独立插件，不是 Valve、SteamOS 或 Decky 的官方项目。

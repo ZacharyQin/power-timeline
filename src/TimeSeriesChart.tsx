@@ -1,5 +1,5 @@
 import { DialogButtonSecondary, Focusable, GamepadButton } from "@decky/ui";
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FaClock, FaInfoCircle } from "react-icons/fa";
 import { IconLabel, PowerScaleLegend, Reading, Restrictions, SemanticText, SemanticValue, batteryStateText, durationText, reasonText, supplyText, timeText } from "./components";
 import { t, useLocale } from "./i18n";
@@ -110,13 +110,14 @@ function ChartGuide({ hardware, games, sleep, gaps }: { hardware: boolean; games
   </Focusable>;
 }
 
-export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, compact = false, showGames = false, onOpen, preferredFocus = false }: {
+export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, compact = false, showGames = false, totals = true, onOpen, preferredFocus = false }: {
   timeline: Timeline;
   cursor?: number | null;
   onCursor?: (timestamp: number) => void;
   hardware?: boolean;
   compact?: boolean;
   showGames?: boolean;
+  totals?: boolean;
   onOpen?: () => void;
   preferredFocus?: boolean;
 }) {
@@ -187,18 +188,20 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
   }, [compact, selected, points, hasSystemReadings, language]);
   const systemReadingError = Boolean(selected?.errors.system_w && selected.errors.system_w !== "not_confirmed_battery_discharge");
   const markerTime = selected?.timestamp ?? selectedTime;
-  const sleepDescription = (event: SleepEvent) => t("chart.sleepAria", { label: timelineEventLabel(event), start: timeText(event.timestamp, true), end: timeText(event.end, true), duration: durationText(event.end - event.timestamp) });
+  const descriptions = useMemo(() => new Map(gaps.map((event) => [event, isSleepEvent(event)
+    ? t("chart.sleepAria", { label: timelineEventLabel(event), start: timeText(event.timestamp, true), end: timeText(event.end, true), duration: durationText(event.end - event.timestamp) })
+    : t("chart.gapAria", { label: timelineEventLabel(event), start: timeText(event.timestamp, true), end: timeText(event.end ?? end, true), duration: durationText((event.end ?? end) - event.timestamp) })])), [gaps, end, language]);
+  const sleepDescription = (event: SleepEvent) => descriptions.get(event)!;
   const gapBackgrounds = (top: number, bottom: number, labelY: number) => gaps.map((event, index) => {
     const from = Math.max(left, Math.min(right, x(event.timestamp)));
     const to = Math.max(left, Math.min(right, x(event.end ?? end)));
     if (to <= from) return null;
     const sleep = event.label === "suspend";
-    const description = isSleepEvent(event) ? sleepDescription(event) : t("chart.gapAria", { label: timelineEventLabel(event), start: timeText(event.timestamp, true), end: timeText(event.end ?? end, true), duration: durationText((event.end ?? end) - event.timestamp) });
-    return <g key={index} role="img" aria-label={description}>
-      <title>{description}</title>
-      <rect x={from} y={top} width={to - from} height={bottom - top} fill={sleep ? semanticColors.soc : "currentColor"} opacity={sleep ? "0.18" : "0.07"} />
+    const description = descriptions.get(event)!;
+    return <Fragment key={index}>
+      <rect role="img" aria-label={description} x={from} y={top} width={to - from} height={bottom - top} fill={sleep ? semanticColors.soc : "currentColor"} opacity={sleep ? "0.18" : "0.07"}><title>{description}</title></rect>
       {sleep && to - from >= 40 && <text x={(from + to) / 2} y={labelY} textAnchor="middle" fill="currentColor" fontSize="14" aria-hidden="true">{t("chart.sleep")}</text>}
-    </g>;
+    </Fragment>;
   });
   const plot = (key: SeriesKey, top: number, bottom: number, maximum: number, smooth = false) => {
     const item = chartSeries[key];
@@ -251,7 +254,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
           </line>;
         })}
       </svg>
-      {paths.map((d, index) => <path key={index} d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={item.dash} vectorEffect="non-scaling-stroke" />)}
+      {paths.length > 0 && <path d={paths.join(" ")} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={item.dash} vectorEffect="non-scaling-stroke" />}
       {dots.map((dot, index) => <circle key={index} cx={dot.x} cy={dot.y} r="1.6" fill="currentColor" />)}
     </g>;
   };
@@ -373,7 +376,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       const next = points[Math.max(0, Math.min(points.length - 1, index + (button === GamepadButton.DIR_LEFT ? -1 : 1)))];
       onCursor(next.timestamp);
       return true;
-    }}><svg ref={svgRef} role="img" aria-label={`${t("chart.fullAria")}${showGames ? t("chart.fullAriaGames") : ""}${t("chart.fullAriaRest")}${hasPoints ? "" : t("chart.fullAriaEmpty")}`} viewBox={`0 0 ${plotWidth} 360`} style={{ width: "100%", height: 360, minHeight: 360, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+    }}><svg ref={svgRef} role="img" aria-label={`${t("chart.fullAria")}${showGames ? t("chart.fullAriaGames") : ""}${t("chart.fullAriaRest")}${hasPoints ? "" : t("chart.fullAriaEmpty")}`} viewBox={`0 0 ${plotWidth} 260`} style={{ width: "100%", height: 260, minHeight: 260, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
       gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
       event.currentTarget.setPointerCapture(event.pointerId);
     }} onPointerMove={(event) => {
@@ -401,36 +404,36 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
         const description = t("chart.gameInterval", { name: game.name, start: timeText(event.timestamp, true), end: timeText(event.end ?? event.last_seen, true) });
         return <g key={event.session_id} className="pt-game-interval" data-game-id={game.id} role="img" aria-label={description}>
           <title>{description}</title>
-          <rect x={begin} y="25" width={finish - begin} height="298" fill={game.color} opacity="0.13" />
-          <line x1={begin} x2={finish} y1={25 + lane * 3} y2={25 + lane * 3} stroke={game.color} strokeWidth="2" />
+          <rect x={begin} y="16" width={finish - begin} height="221" fill={game.color} opacity="0.13" />
+          <line x1={begin} x2={finish} y1={16 + lane * 3} y2={16 + lane * 3} stroke={game.color} strokeWidth="2" />
           {lane < 2 && finish - begin >= game.name.length * 13 + 30 && <g aria-hidden="true">
-            <GameIcon gameId={game.id} svg x={begin + 4} y={148 + lane * 18} />
-            <text x={begin + 27} y={162 + lane * 18} fill="currentColor" fontSize="13">{game.name}</text>
+            <GameIcon gameId={game.id} svg x={begin + 4} y={112 + lane * 16} />
+            <text x={begin + 27} y={126 + lane * 16} fill="currentColor" fontSize="12">{game.name}</text>
           </g>}
         </g>;
       })}
-      <g fill="currentColor" fontSize="14">
-        <text x="0" y="18">{t("chart.axisBattery")}</text><text x="14" y="39">100</text><text x="25" y="94">50</text><text x="33" y="149">0</text>
-        <text x="0" y="186">{t("chart.axisPower")}</text><text x="12" y="207">{maxW}</text><text x="12" y="262">{maxW / 2}</text><text x="33" y="317">0</text>
+      <g fill="currentColor" fontSize="12">
+        <text x="0" y="13">{t("chart.axisBattery")}</text><text x="14" y="28">100</text><text x="25" y="71">50</text><text x="33" y="113">0</text>
+        <text x="0" y="137">{t("chart.axisPower")}</text><text x="12" y="150">{maxW}</text><text x="12" y="193">{maxW / 2}</text><text x="33" y="235">0</text>
         {axisTicks(start, end, left, right, x).map((tick) => {
           const position = x(tick.timestamp);
           return <g key={tick.timestamp}>
-            <line x1={position} x2={position} y1="323" y2={tick.label ? "334" : "329"} stroke="currentColor" strokeOpacity={tick.label ? 0.5 : 0.28} />
-            {tick.label && <text x={position} y="349" textAnchor={tick.anchor} fontSize="12">{tick.label}</text>}
+            <line x1={position} x2={position} y1="237" y2={tick.label ? "244" : "240"} stroke="currentColor" strokeOpacity={tick.label ? 0.5 : 0.28} />
+            {tick.label && <text x={position} y="256" textAnchor={tick.anchor} fontSize="11">{tick.label}</text>}
           </g>;
         })}
       </g>
-      {[35, 90, 145, 203, 258, 313].map((y) => <line key={y} x1={left} y1={y} x2={right} y2={y} stroke="currentColor" opacity="0.15" />)}
-      {gapBackgrounds(25, 323, 162)}
-      {plot("battery_percent", 35, 145, 100)}
-      {series.map((item) => plot(item.key, 203, 313, maxW))}
+      {[24, 66.5, 109, 146, 188.5, 231].map((y) => <line key={y} x1={left} y1={y} x2={right} y2={y} stroke="currentColor" opacity="0.15" />)}
+      {gapBackgrounds(16, 237, 126)}
+      {plot("battery_percent", 24, 109, 100)}
+      {series.map((item) => plot(item.key, 146, 231, maxW))}
       {selected && markerTime >= start && markerTime <= end && (() => {
         const markerX = x(markerTime);
         const placeLeft = markerX > (left + right) / 2;
         const textX = placeLeft ? markerX - 8 : markerX + 8;
         const anchor = placeLeft ? "end" : "start";
-        const batteryY = selected.battery_percent === null ? 90 : 35 + (145 - 35) * (1 - Math.min(100, Math.max(0, selected.battery_percent)) / 100);
-        const powerY = selected.system_w === null || maxW <= 0 ? 258 : 203 + (313 - 203) * (1 - Math.min(maxW, Math.max(0, selected.system_w)) / maxW);
+        const batteryY = selected.battery_percent === null ? 66.5 : 24 + (109 - 24) * (1 - Math.min(100, Math.max(0, selected.battery_percent)) / 100);
+        const powerY = selected.system_w === null || maxW <= 0 ? 188.5 : 146 + (231 - 146) * (1 - Math.min(maxW, Math.max(0, selected.system_w)) / maxW);
         const date = new Date(markerTime * 1000);
         const when = span > 36 * 3600 ? `${date.getMonth() + 1}/${date.getDate()} ${padTime(date.getHours())}:${padTime(date.getMinutes())}` : `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
         const playing = (gameIntervals?.spans ?? []).filter((spanItem) => markerTime >= spanItem.from && markerTime <= spanItem.to).sort((a, b) => b.from - a.from)[0];
@@ -438,10 +441,10 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
         const nameWidth = [...gameName].reduce((sum, char) => sum + (char.charCodeAt(0) > 255 ? 12 : 7), 0);
         const blockWidth = playing ? 22 + nameWidth : 0;
         const blockX = playing ? Math.max(left, Math.min(placeLeft ? textX - blockWidth : textX, right - blockWidth)) : textX;
-        const labelY = Math.max(46, Math.min(batteryY, 118));
+        const labelY = Math.max(36, Math.min(batteryY, 76));
         const valueX = playing ? (placeLeft ? blockX + blockWidth : blockX) : textX;
         return <g fill="#fff" style={{ color: "#fff" }}>
-          <line x1={markerX} y1="25" x2={markerX} y2="323" stroke="#fff" strokeOpacity="0.45" />
+          <line x1={markerX} y1="16" x2={markerX} y2="237" stroke="#fff" strokeOpacity="0.45" />
           {selected.battery_percent !== null && <circle cx={markerX} cy={batteryY} r="3.5" stroke="none" />}
           {selected.system_w !== null && <circle cx={markerX} cy={powerY} r="3.5" stroke="none" />}
           {playing && <>
@@ -453,7 +456,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
           <text x={valueX} y={labelY + 32} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="11" opacity="0.82" stroke="none">{when}</text>
         </g>;
       })()}
-      {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 162 : showGames ? 193 : 175} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${timelineEventLabel(event)}`}</title></circle>)}
+      {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 120 : showGames ? 141 : 127} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${timelineEventLabel(event)}`}</title></circle>)}
     </svg></Focusable>
     <section className="pt-chart-auxiliary" aria-label={t("chart.readout")}>
       <div className="pt-chart-readout" aria-live="polite">
@@ -474,7 +477,7 @@ export function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, 
       {gameIntervals && <GameLegend games={gameIntervals.games} />}
       <ChartGuide hardware={hardware} games={hasGameIntervals} sleep={hasSleep} gaps={gaps.some((event) => !isSleepEvent(event))} />
     </section>
-    <PageReading label={t("chart.coverage")} className="pt-inline-facts">{t("chart.coverageValue", { covered: durationText(timeline.coverage_seconds), span: durationText(end - start) })} <SemanticValue value={timeline.system_wh} unit="Wh" role="system" /></PageReading>
+    {totals && <PageReading label={t("chart.coverage")} className="pt-inline-facts">{t("chart.coverageValue", { covered: durationText(timeline.coverage_seconds), span: durationText(end - start) })} <SemanticValue value={timeline.system_wh} unit="Wh" role="system" /></PageReading>}
     {selected && <Restrictions errors={selected.errors} label={t("chart.sampleStatus")} />}
   </>;
-}
+});

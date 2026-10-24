@@ -18,6 +18,7 @@ from py_modules.recorder import Recorder, discontinuity
 from py_modules.telemetry import Telemetry
 from py_modules.power_info import PowerInfo
 from py_modules.power_flow import PowerFlow
+from py_modules.sailing import SailingController
 
 
 class Plugin:
@@ -25,12 +26,15 @@ class Plugin:
         self._ready = asyncio.Event()
         self._task = None
         self._stopping = False
+        self._history_lock = asyncio.Lock()
         self._failure = None
         self._recorder = None
         self._tracker = None
         self._power_info = None
         self._power_flow = None
         self._flow_snapshot = None
+        self._sailing = None
+        self._sailing_error = None
         try:
             runtime = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR")
             if not runtime:
@@ -45,6 +49,15 @@ class Plugin:
             self._attribution = Attribution()
             self._task = asyncio.create_task(self._record_loop())
             decky.logger.info("Power Timeline recorder started")
+            try:
+                self._sailing = SailingController(Path(runtime) / "sailing", self._telemetry, self._emit_sailing)
+                await self._sailing.start()
+            except Exception as exc:
+                self._sailing_error = str(exc)
+                if self._sailing is not None:
+                    await self._sailing.close()
+                    self._sailing = None
+                decky.logger.exception("Sailing Mode startup failed; recording remains active")
         except Exception as exc:
             self._failure = str(exc)
             decky.logger.exception("Power Timeline startup failed")
@@ -113,18 +126,32 @@ class Plugin:
         result["last_charge"] = recorder.charging.status(time.time(), result["battery"]["state"], recorder.status == "recording")
         return result
 
-    async def get_timeline(self, start, end, max_points=600, bucket_seconds=None):
+    async def _query_history(self, query, *args):
         recorder = await self._require_recorder()
-        return recorder.timeline(start, end, max_points, bucket_seconds)
+        await self._history_lock.acquire()
+        if self._stopping:
+            self._history_lock.release()
+            raise RuntimeError("Power Timeline is stopping")
+        worker = asyncio.create_task(asyncio.to_thread(recorder.read_history, query, *args))
+
+        def finished(task):
+            self._history_lock.release()
+            if not task.cancelled():
+                task.exception()  # Also consume errors if the RPC caller has disconnected.
+
+        worker.add_done_callback(finished)
+        # Caller cancellation must not release the lock while its worker still runs.
+        return await asyncio.shield(worker)
+
+    async def get_timeline(self, start, end, max_points=600, bucket_seconds=None):
+        return await self._query_history(Recorder.timeline, start, end, max_points, bucket_seconds)
 
     async def get_game_history(self, game_id=None, start=None, end=None,
                                metric="system", sort="recent", offset=0, limit=50):
-        recorder = await self._require_recorder()
-        return recorder.game_history(game_id, start, end, metric, sort, offset, limit)
+        return await self._query_history(Recorder.game_history, game_id, start, end, metric, sort, offset, limit)
 
     async def get_session_detail(self, session_id, max_points=600):
-        recorder = await self._require_recorder()
-        return recorder.session_detail(session_id, max_points)
+        return await self._query_history(Recorder.session_detail, session_id, max_points)
 
     async def observe_games(self, games, source="", observed_at=0):
         recorder = await self._require_recorder()
@@ -134,8 +161,35 @@ class Plugin:
         recorder.observe_games(games)
         return {"accepted": True}
 
+    async def _emit_sailing(self, state):
+        try:
+            await decky.emit("sailing_changed", state)
+        except Exception:
+            decky.logger.warning("Sailing Mode frontend event unavailable")
+
+    async def _require_sailing(self):
+        await self._require_recorder()
+        if self._sailing is None:
+            raise RuntimeError(self._sailing_error or "Sailing Mode is unavailable")
+        return self._sailing
+
+    async def get_sailing_status(self):
+        return (await self._require_sailing()).snapshot()
+
+    async def update_native_charge_settings(self, enabled, limit):
+        return await (await self._require_sailing()).update_native(enabled, limit)
+
+    async def set_sailing_mode(self, enabled, delta_percent=10):
+        return await (await self._require_sailing()).set_mode(enabled, delta_percent)
+
     async def _unload(self):
         self._stopping = True
+        sailing = getattr(self, "_sailing", None)
+        if sailing is not None:
+            try:
+                await sailing.close()
+            except Exception:
+                decky.logger.exception("Sailing Mode restoration failed during unload")
         task = getattr(self, "_task", None)
         if task:
             task.cancel()
@@ -143,6 +197,10 @@ class Plugin:
                 await task
             except asyncio.CancelledError:
                 pass
+        history_lock = getattr(self, "_history_lock", None)
+        if history_lock is not None:
+            async with history_lock:
+                pass  # Drain the active reader before releasing recorder ownership.
         power_flow = getattr(self, "_power_flow", None)
         if power_flow:
             power_flow.close()

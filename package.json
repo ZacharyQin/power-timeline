@@ -1,12 +1,13 @@
 {
   "name": "power-timeline",
-  "version": "0.2.1",
+  "version": "0.3.6",
   "description": "Battery timeline, power history and game energy estimates for Steam Deck",
   "type": "module",
   "private": true,
   "scripts": {
     "build": "rollup -c",
     "typecheck": "tsc --noEmit",
+    "test:frontend": "node --experimental-strip-types --test tests/*.test.mjs",
     "test:python": "python3 -m unittest discover -s tests -v"
   },
   "license": "BSD-3-Clause",

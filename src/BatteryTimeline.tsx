@@ -2,16 +2,18 @@ import { DialogButton, Dropdown, Focusable, Toggle } from "@decky/ui";
 import { useEffect } from "react";
 import { FaGamepad, FaMicrochip, FaStream } from "react-icons/fa";
 import { getTimeline } from "./backend";
-import { IconLabel, durationText, timeText } from "./components";
+import { batteryStateText, IconLabel, SemanticValue, supplyText, durationText, timeText } from "./components";
 import { t } from "./i18n";
 import { PageQueryStatus, PageReading } from "./FullPage";
-import { useQuery } from "./data";
+import { useQuery, useSnapshot } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
 import { getView, openSession, rangeBounds, rangeBucket, updateView, useView } from "./viewState";
 import { isSleepEvent, timelineEventLabel } from "./timelineEvents";
 
 export function BatteryTimeline({ visible }: { visible: boolean }) {
   const view = useView();
+  const live = useSnapshot(visible);
+  const sample = live.snapshot?.sample ?? null;
   const key = `timeline:${view.range}`;
   const query = useQuery(key, () => {
     const current = getView();
@@ -26,27 +28,40 @@ export function BatteryTimeline({ visible }: { visible: boolean }) {
   const selectedEvent = events.findIndex((event) => view.event !== null && event.kind === view.event.kind && event.timestamp === view.event.timestamp && event.session_id === view.event.session_id);
   return <div className="pt-timeline">
     <style>{`
+      .pt-fullpage .pt-timeline { container: pt-timeline / inline-size; }
       .pt-fullpage .pt-timeline .pt-control { min-width: 0; max-width: 100%; }
-      .pt-fullpage .pt-range-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-      .pt-fullpage .pt-range-tab { min-width: 72px; }
+      .pt-fullpage .pt-timeline-workbench { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+      .pt-fullpage .pt-timeline-workbench > * { min-width: 0; }
+      .pt-fullpage .pt-timeline-side { box-sizing: border-box; padding: 12px; border: 1px solid var(--pt-border); border-radius: 6px; background: var(--pt-surface); }
+      .pt-fullpage .pt-timeline-side .pt-reading { margin: 0; }
+      .pt-fullpage .pt-timeline-side .pt-reading + .pt-reading { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--pt-border); }
+      .pt-fullpage .pt-timeline-side .pt-reading-value { font-size: 22px; line-height: 28px; font-weight: 600; }
+      .pt-fullpage .pt-range-tabs { display: flex; gap: 3px; padding: 3px; border-radius: 6px; background: var(--pt-surface); }
+      .pt-fullpage .pt-page-frame button.pt-range-tab.DialogButton { min-width: 64px; padding: 4px 8px; font-size: 12px; }
       .pt-fullpage .pt-range-tab-active:not(.gpfocus):not(:focus-visible) { background: color-mix(in srgb, currentColor 12%, transparent); box-shadow: inset 0 -2px 0 currentColor; }
-      .pt-fullpage .pt-timeline-boundaries { margin: 8px 0 16px; font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+      .pt-fullpage .pt-timeline-boundaries { margin: 0 0 8px; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+      .pt-fullpage .pt-timeline-side .pt-coverage-duration { font-size: 14px; line-height: 22px; font-weight: 400; }
       .pt-fullpage .pt-timeline-events { margin-top: 24px; }
       .pt-fullpage .pt-timeline-event { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
       .pt-fullpage .pt-timeline-event time { font-variant-numeric: tabular-nums; }
+      @container pt-timeline (min-width: 620px) {
+        .pt-fullpage .pt-timeline-workbench { grid-template-columns: minmax(0, 1fr) 165px; }
+      }
     `}</style>
-    <div className="pt-toolbar">
-      <div className="pt-range-tabs" role="tablist" aria-label={t("range.aria")}>
+    <div className="pt-timeline-workbench">
+    <div>
+    <Focusable className="pt-toolbar" flow-children="row">
+      <Focusable className="pt-range-tabs" flow-children="row" role="tablist" aria-label={t("range.aria")}>
         {([["1d", "range.1d"], ["3d", "range.3d"], ["7d", "range.7d"]] as const).map(([id, label]) => <Focusable key={id} preferredFocus={view.focus === "range" && view.range === id}><DialogButton className={`pt-compact-button pt-range-tab${view.range === id ? " pt-range-tab-active" : ""}`} onClick={() => updateView({ range: id, bounds: rangeBounds(id), live: true, cursor: null, event: null, focus: "range" })}>{t(label)}</DialogButton></Focusable>)}
-      </div>
+      </Focusable>
       <Focusable className="pt-control" aria-label={t("range.hardware")}>
         <span><IconLabel icon={FaMicrochip}>{t("range.hardware")}</IconLabel></span>
         <Toggle aria-label={t("range.hardware")} value={view.hardware} onChange={(hardware) => updateView({ hardware })} />
       </Focusable>
-    </div>
+    </Focusable>
     <p className="pt-timeline-boundaries pt-muted">{view.live ? t("range.live") : t("range.fixed")} · {timeText(displayedBounds.start, true)} — {timeText(displayedBounds.end, true)}</p>
     <PageQueryStatus loading={query.loading} error={query.error} retry={query.refresh} />
-    {query.data && <TimeSeriesChart timeline={query.data} showGames cursor={view.cursor} onCursor={(cursor) => updateView({ cursor, live: false, focus: "cursor" })} hardware={view.hardware} preferredFocus={view.focus === "cursor"} />}
+    {query.data && <div className="pt-chart-panel"><TimeSeriesChart timeline={query.data} totals={false} showGames cursor={view.cursor} onCursor={(cursor) => updateView({ cursor, live: false, focus: "cursor" })} hardware={view.hardware} preferredFocus={view.focus === "cursor"} /></div>}
     <section className="pt-timeline-events" aria-labelledby="pt-timeline-events-title">
       <h2 className="pt-section-title" id="pt-timeline-events-title">{t("events.title")}</h2>
       {events.length === 0 ? <PageReading label={query.loading ? t("events.loading") : t("events.empty")} /> : <>
@@ -64,5 +79,18 @@ export function BatteryTimeline({ visible }: { visible: boolean }) {
         </div>}
       </>}
     </section>
+    </div>
+    <aside className="pt-timeline-side" aria-label={t("power.summary")}>
+      <PageReading layout="below" label={t("power.level")} description={sample ? <>{batteryStateText(sample.battery_state)} · {supplyText(sample.supply)}</> : undefined}>
+        <SemanticValue value={sample?.battery_percent ?? null} unit="%" role="battery" digits={0} />
+      </PageReading>
+      <PageReading layout="below" label={t("session.systemEnergy")}>
+        <SemanticValue value={query.data?.system_wh ?? null} unit="Wh" role="system" />
+      </PageReading>
+      <PageReading layout="below" label={t("chart.coverage")}>
+        <span className="pt-coverage-duration">{query.data ? `${durationText(query.data.coverage_seconds)} / ${durationText(query.data.end - query.data.start)}` : "—"}</span>
+      </PageReading>
+    </aside>
+    </div>
   </div>;
 }
