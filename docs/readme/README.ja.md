@@ -13,10 +13,10 @@ Power Timeline は Steam Deck 用の Decky プラグインです。バッテリ�
   <a href="#what">見えるもの</a> · <a href="#install">インストール</a> · <a href="#try-it">最初の使い方</a> · <a href="#limits">注意</a> · <a href="#language">言語</a> · <a href="../../CHANGELOG.md">更新履歴</a>
 </p>
 <p align="center">
-  <img src="../qam-menu.jpg" alt="クイックアクセスメニューの Power Timeline。バッテリー、小さな電力フロー、過去24時間、バッテリー情報" width="640">
+  <img src="../qam-menu-ja.jpg" alt="クイックアクセスメニューの Power Timeline。バッテリー、小さな電力フロー、Steam の充電制限、過去24時間" width="640">
 </p>
 
-この画像は、電源につないだ状態のクイックアクセスメニューです。今のバッテリー、小さな電力フロー、過去 24 時間、バッテリー情報が見えます。画像のワット数は本体全体の電力ではありません。
+この画像は、電源につないだ状態のクイックアクセスメニューです。今のバッテリー、小さな電力フロー、Steam の充電制限、過去 24 時間が見えます。画像のワット数は本体全体の電力ではありません。
 
 <h2 id="what">見えるもの</h2>
 

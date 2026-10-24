@@ -13,10 +13,10 @@ Power Timeline is a Decky plugin for Steam Deck. It lets you compare the battery
   <a href="#what">What you see</a> · <a href="#install">Install</a> · <a href="#try-it">First use</a> · <a href="#limits">Please note</a> · <a href="#language">Language</a> · <a href="./CHANGELOG.md">Changelog</a>
 </p>
 <p align="center">
-  <img src="./docs/qam-menu.jpg" alt="Power Timeline in the Quick Access menu: battery, the small power-flow picture, the last 24 hours, and battery details" width="640">
+  <img src="./docs/qam-menu-en.jpg" alt="Power Timeline in the Quick Access menu: battery, the small power-flow picture, Steam's charge limit, and the last 24 hours" width="640">
 </p>
 
-This picture is the Quick Access menu while the Deck is plugged in. It shows the current battery, the small power-flow picture, the last 24 hours, and battery details. The watt figures in the picture are not whole-device power.
+This picture is the Quick Access menu while the Deck is plugged in. It shows the current battery, the small power-flow picture, Steam's charge limit, and the last 24 hours. The watt figures in the picture are not whole-device power.
 
 <h2 id="what">What you see</h2>
 

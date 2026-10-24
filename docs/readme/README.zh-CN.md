@@ -13,10 +13,10 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
   <a href="#what">能看到什么</a> · <a href="#install">安装</a> · <a href="#try-it">第一次使用</a> · <a href="#limits">请注意</a> · <a href="#language">语言</a> · <a href="../../CHANGELOG.md">更新记录</a>
 </p>
 <p align="center">
-  <img src="../qam-menu.jpg" alt="快捷访问菜单里的 Power Timeline：电量、功率流小图、最近 24 小时和电池信息" width="640">
+  <img src="../qam-menu-zh-CN.jpg" alt="快捷访问菜单里的 Power Timeline：电量、功率流小图、Steam 充电限制和最近 24 小时" width="640">
 </p>
 
-这张图是插着电源时的快捷访问菜单。能看到当前电量、功率流小图、最近 24 小时和电池信息。图里的瓦数不是整机功率。
+这张图是插着电源时的快捷访问菜单。能看到当前电量、功率流小图、Steam 充电限制和最近 24 小时。图里的瓦数不是整机功率。
 
 <h2 id="what">能看到什么</h2>
 

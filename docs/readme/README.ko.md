@@ -13,10 +13,10 @@ Power Timeline은 Steam Deck용 Decky 플러그인입니다. 배터리의 완충
   <a href="#what">보이는 것</a> · <a href="#install">설치</a> · <a href="#try-it">처음 사용</a> · <a href="#limits">알아 두기</a> · <a href="#language">언어</a> · <a href="../../CHANGELOG.md">변경 기록</a>
 </p>
 <p align="center">
-  <img src="../qam-menu.jpg" alt="빠른 접근 메뉴의 Power Timeline. 배터리, 작은 전력 흐름, 최근 24시간, 배터리 정보" width="640">
+  <img src="../qam-menu-ko.jpg" alt="빠른 접근 메뉴의 Power Timeline. 배터리, 작은 전력 흐름, Steam 충전 제한, 최근 24시간" width="640">
 </p>
 
-이 그림은 전원을 연결한 상태의 빠른 접근 메뉴입니다. 현재 배터리, 작은 전력 흐름, 최근 24시간, 배터리 정보가 보입니다. 그림의 와트는 기기 전체 전력이 아닙니다.
+이 그림은 전원을 연결한 상태의 빠른 접근 메뉴입니다. 현재 배터리, 작은 전력 흐름, Steam 충전 제한, 최근 24시간이 보입니다. 그림의 와트는 기기 전체 전력이 아닙니다.
 
 <h2 id="what">보이는 것</h2>
 
