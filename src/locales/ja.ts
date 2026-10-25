@@ -1,6 +1,23 @@
 import type { MessageKey } from "./en";
 
 export const ja: Record<MessageKey, string> = {
+  "fan.title": "ファン制御",
+  "fan.automatic": "システム自動",
+  "fan.maximum": "最大回転数",
+  "fan.error": "ファン制御の確認が必要です",
+  "fan.unavailable": "ファン制御を利用できません",
+  "fan.downloadMode": "低消費電力ダウンロードモードを優先します",
+  "fan.externalControl": "外部の制御は変更していません",
+  "fan.fault": "ファンがハードウェア異常を報告しています",
+  "fan.stalled": "最大を要求しても実測回転数がゼロのままです",
+  "fan.hardwareMissing": "ファンの読み取りが欠落または一意ではありません",
+  "fan.hardwareFailed": "ファンの目標値を書込み後に確認できません",
+  "fan.recoveryFailed": "自動制御への復元を確認できません",
+  "fan.restoreDegraded": "EC 自動制御へ戻しましたが、OS のファンサービスの復元に失敗しました",
+  "fan.monitorFailed": "安全監視を利用できません",
+  "fan.serviceFailed": "公式ファンサービスの切替が完了しませんでした",
+  "fan.sleeping": "スリープのため最大制御を終了しました",
+  "fan.ownerLost": "復元保護により自動制御へ戻しました",
   "sailing.title": "セーリングモード",
   "sailing.loading": "充電制御を読み取り中…",
   "sailing.description": "下限まで待機してから Steam の上限まで充電を続けます。区間内で有効化または再接続しても補充電しません。",

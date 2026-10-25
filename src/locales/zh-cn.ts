@@ -1,6 +1,23 @@
 import type { MessageKey } from "./en";
 
 export const zhCn: Record<MessageKey, string> = {
+  "fan.title": "风扇控制",
+  "fan.automatic": "系统自动",
+  "fan.maximum": "最大转速",
+  "fan.error": "风扇控制需要处理",
+  "fan.unavailable": "风扇控制不可用",
+  "fan.downloadMode": "低功耗下载模式优先",
+  "fan.externalControl": "未覆盖外部控制器的新设置",
+  "fan.fault": "风扇报告硬件故障",
+  "fan.stalled": "请求最大转速后，实测仍持续为零",
+  "fan.hardwareMissing": "风扇读数缺失或不唯一",
+  "fan.hardwareFailed": "风扇目标写入后未能读回",
+  "fan.recoveryFailed": "未能确认自动模式已恢复",
+  "fan.restoreDegraded": "已归还 EC 自动控制，但恢复系统风扇服务失败",
+  "fan.monitorFailed": "安全监视器不可用",
+  "fan.serviceFailed": "官方风扇服务未完成切换",
+  "fan.sleeping": "已因休眠结束最大转速",
+  "fan.ownerLost": "恢复保护已还原自动模式",
   "sailing.title": "航行模式",
   "sailing.loading": "正在读取充电控制状态…",
   "sailing.description": "降到下限才恢复充电，随后持续充至 Steam 上限。区间内启用或重新接电不补充电量。",

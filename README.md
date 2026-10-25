@@ -36,6 +36,10 @@ The backend runs independently of open pages. Disabling the mode or unloading th
 
 Select **QAM component order** at the bottom to sort all 10 components directly on the QAM page, without a separate dialog. Use up/down to select a component, **A** to pick it up, up/down to move it, then **A** to put it down. **B** undoes the current lift; when nothing is lifted it cancels the entire draft. **X** saves and exits, and **Y** restores the default draft. Native keyboard hints are shown as well. While sorting, the component contents remain visible but their normal actions are disabled; touch/mouse users can tap a component and use its inline movement buttons. Hidden components retain a named slot. Saving remembers the order on this Deck, and new components are appended to saved orders.
 
+**Fan control** shares the existing fan-curve component in QAM: a fan-icon heading followed by only two tabs, **System automatic** and **Maximum speed**. L1/R1 hints, the dropdown, RPM row and explanation paragraph are omitted. Left/right only moves focus; press **A** to confirm the mode. The complete matching chart appears only in confirmed automatic mode and is hidden in maximum mode; moving focus does not change it. The saved component position remains unchanged. Maximum requests 7300 RPM; this is not a guarantee of the measured speed.
+
+Maximum continues with QAM closed. Choosing automatic or unloading the plugin restores the previous OS or EC automatic mode. An independent systemd worker and exit cleanup handle backend loss; low-power download mode and detected external controllers take priority rather than being overwritten. The official curve and service enablement are not changed. A logind delay inhibitor requests restoration before sleep, and maximum is never resumed automatically after restart. Controlled sleep/reboot and physical controller/touchscreen acceptance are still pending.
+
 <h2 id="install">Install</h2>
 
 ### Install Decky first

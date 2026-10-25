@@ -1,6 +1,23 @@
 import type { MessageKey } from "./en";
 
 export const es: Record<MessageKey, string> = {
+  "fan.title": "Control del ventilador",
+  "fan.automatic": "Automático del sistema",
+  "fan.maximum": "Velocidad máxima",
+  "fan.error": "El control del ventilador necesita atención",
+  "fan.unavailable": "Control del ventilador no disponible",
+  "fan.downloadMode": "El modo de descarga de bajo consumo tiene prioridad",
+  "fan.externalControl": "No se ha modificado el control externo",
+  "fan.fault": "El ventilador informa de un fallo de hardware",
+  "fan.stalled": "La velocidad medida siguió en cero tras solicitar el máximo",
+  "fan.hardwareMissing": "Las lecturas del ventilador faltan o son ambiguas",
+  "fan.hardwareFailed": "No se pudo confirmar el objetivo del ventilador",
+  "fan.recoveryFailed": "No se pudo confirmar la restauración automática",
+  "fan.restoreDegraded": "Automático del EC restaurado; falló la restauración del servicio del sistema",
+  "fan.monitorFailed": "El monitor de seguridad no está disponible",
+  "fan.serviceFailed": "El servicio oficial no terminó la transición",
+  "fan.sleeping": "El máximo terminó para suspender",
+  "fan.ownerLost": "La protección de recuperación restauró el control automático",
   "sailing.title": "Modo de navegación",
   "sailing.loading": "Leyendo el control de carga…",
   "sailing.description": "Espera al límite inferior y después carga hasta el límite de Steam. Activarlo o reconectar dentro del intervalo no repone la carga.",

@@ -1,3 +1,16 @@
+export interface FanStatus {
+  available: boolean;
+  mode: "automatic" | "maximum" | null;
+  phase: "automatic" | "starting" | "maximum" | "restoring" | "conflict" | "error" | "unavailable";
+  target_rpm: number | null;
+  actual_rpm: number | null;
+  fault: boolean | null;
+  original_mode: "os" | "ec" | null;
+  reason: string | null;
+  error: string | null;
+  updated_at: number;
+}
+
 export interface SailingStatus {
   enabled: boolean;
   phase: "disabled" | "waiting" | "charging" | "paused" | "error";

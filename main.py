@@ -19,6 +19,7 @@ from py_modules.telemetry import Telemetry
 from py_modules.power_info import PowerInfo
 from py_modules.power_flow import PowerFlow
 from py_modules.sailing import SailingController
+from py_modules.fan_control import FanController
 
 
 class Plugin:
@@ -35,6 +36,8 @@ class Plugin:
         self._flow_snapshot = None
         self._sailing = None
         self._sailing_error = None
+        self._fan = None
+        self._fan_error = None
         try:
             runtime = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR")
             if not runtime:
@@ -58,6 +61,18 @@ class Plugin:
                     await self._sailing.close()
                     self._sailing = None
                 decky.logger.exception("Sailing Mode startup failed; recording remains active")
+            try:
+                self._fan = FanController()
+                await self._fan.start()
+            except Exception as exc:
+                self._fan_error = str(exc)
+                if self._fan is not None:
+                    try:
+                        await self._fan.close()
+                    except Exception:
+                        decky.logger.exception("Fan startup recovery remains incomplete")
+                    self._fan = None
+                decky.logger.exception("Fan control startup failed; recording remains active")
         except Exception as exc:
             self._failure = str(exc)
             decky.logger.exception("Power Timeline startup failed")
@@ -182,8 +197,29 @@ class Plugin:
     async def set_sailing_mode(self, enabled, delta_percent=10):
         return await (await self._require_sailing()).set_mode(enabled, delta_percent)
 
+    async def get_fan_status(self):
+        await self._require_recorder()
+        if self._fan is not None:
+            return await self._fan.status()
+        return {"available": False, "mode": None, "phase": "unavailable",
+                "target_rpm": None, "actual_rpm": None, "fault": None,
+                "original_mode": None, "reason": "monitor_failed",
+                "error": self._fan_error or "Fan control is unavailable", "updated_at": time.time()}
+
+    async def set_fan_mode(self, mode):
+        await self._require_recorder()
+        if self._fan is None:
+            raise RuntimeError(self._fan_error or "Fan control is unavailable")
+        return await self._fan.set_mode(mode)
+
     async def _unload(self):
         self._stopping = True
+        fan = getattr(self, "_fan", None)
+        if fan is not None:
+            try:
+                await fan.close()
+            except Exception:
+                decky.logger.exception("Fan restoration failed during unload; independent recovery remains available")
         sailing = getattr(self, "_sailing", None)
         if sailing is not None:
             try:

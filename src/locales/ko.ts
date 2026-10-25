@@ -1,6 +1,23 @@
 import type { MessageKey } from "./en";
 
 export const ko: Record<MessageKey, string> = {
+  "fan.title": "팬 제어",
+  "fan.automatic": "시스템 자동",
+  "fan.maximum": "최대 회전수",
+  "fan.error": "팬 제어를 확인해야 합니다",
+  "fan.unavailable": "팬 제어를 사용할 수 없음",
+  "fan.downloadMode": "저전력 다운로드 모드가 우선합니다",
+  "fan.externalControl": "외부 제어 설정은 바꾸지 않았습니다",
+  "fan.fault": "팬이 하드웨어 오류를 보고합니다",
+  "fan.stalled": "최대를 요청한 뒤에도 실측 회전수가 계속 0입니다",
+  "fan.hardwareMissing": "팬 읽기 값이 없거나 중복됩니다",
+  "fan.hardwareFailed": "팬 목표를 쓴 뒤 확인하지 못했습니다",
+  "fan.recoveryFailed": "자동 복원을 확인하지 못했습니다",
+  "fan.restoreDegraded": "EC 자동 모드는 복원했지만 OS 팬 서비스 복원에 실패했습니다",
+  "fan.monitorFailed": "안전 감시기를 사용할 수 없습니다",
+  "fan.serviceFailed": "공식 팬 서비스가 전환을 완료하지 못했습니다",
+  "fan.sleeping": "절전을 위해 최대 회전수를 종료했습니다",
+  "fan.ownerLost": "복구 보호가 자동 제어를 복원했습니다",
   "sailing.title": "항해 모드",
   "sailing.loading": "충전 제어를 읽는 중…",
   "sailing.description": "하한까지 기다린 뒤 Steam 상한까지 계속 충전합니다. 구간 안에서 켜거나 전원을 다시 연결해도 보충 충전하지 않습니다.",

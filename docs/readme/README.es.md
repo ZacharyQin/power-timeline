@@ -36,6 +36,10 @@ El control funciona en segundo plano, sin depender de páginas abiertas. Desacti
 
 Selecciona **Orden de componentes de QAM** al final para ordenar los 10 componentes en la propia página, sin abrir otra ventana. Usa arriba/abajo para elegir, **A** para levantar, arriba/abajo para mover y **A** para soltar. **B** deshace el movimiento actual; si no hay ningún componente levantado, cancela todo el borrador. **X** guarda y sale; **Y** restaura el orden predeterminado en el borrador. El pie nativo también muestra las teclas equivalentes. Durante la ordenación, el contenido sigue visible pero sus acciones normales están desactivadas; con pantalla táctil o ratón, selecciona el componente y usa sus botones de movimiento. Los componentes ocultos conservan una posición con nombre. El orden guardado permanece en esta Deck y los nuevos componentes se añaden al final.
 
+El **Control del ventilador** comparte el componente de la curva existente en QAM: un título con icono de ventilador y solo dos pestañas, **Automático del sistema** y **Velocidad máxima**. No muestra indicaciones L1/R1, desplegable, fila de RPM ni párrafo explicativo. Izquierda/derecha solo mueve el foco; pulsa **A** para confirmar el modo. El gráfico completo solo aparece en el modo automático confirmado y se oculta en el máximo; mover el foco no cambia su visibilidad. Se conserva la posición guardada. El máximo solicita 7300 RPM, sin garantizar una lectura medida idéntica.
+
+El máximo continúa con QAM cerrado. Elegir automático o descargar el plugin restaura el modo automático anterior del sistema o del EC. Un proceso systemd independiente y su limpieza de salida gestionan la pérdida del backend; el modo de descarga de bajo consumo y los controladores externos detectados tienen prioridad. No se cambian la curva oficial ni la activación del servicio. Un inhibidor de retardo de logind solicita la restauración antes de suspender; el máximo nunca se reanuda automáticamente tras reiniciar. La validación de suspensión/reinicio controlados y de mandos físicos/pantalla táctil sigue pendiente.
+
 <h2 id="install">Instalar</h2>
 
 ### Instala Decky antes

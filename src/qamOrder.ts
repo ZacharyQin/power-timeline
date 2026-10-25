@@ -8,7 +8,7 @@ export const QAM_BLOCKS = [
   { id: "timeline", label: "qam.lastDay" },
   { id: "games", label: "qam.gameActivity" },
   { id: "thermal", label: "qam.thermalMap" },
-  { id: "fan", label: "qam.fanCurve" },
+  { id: "fan", label: "fan.title" },
   { id: "specs", label: "qam.specs" },
   { id: "language", label: "lang.row" },
 ] as const satisfies readonly { id: string; label: MessageKey }[];

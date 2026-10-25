@@ -1,6 +1,23 @@
 import type { MessageKey } from "./en";
 
 export const pt: Record<MessageKey, string> = {
+  "fan.title": "Controlo da ventoinha",
+  "fan.automatic": "Automático do sistema",
+  "fan.maximum": "Velocidade máxima",
+  "fan.error": "O controlo da ventoinha precisa de atenção",
+  "fan.unavailable": "Controlo da ventoinha indisponível",
+  "fan.downloadMode": "O modo de transferência de baixo consumo tem prioridade",
+  "fan.externalControl": "O controlo externo não foi alterado",
+  "fan.fault": "A ventoinha comunica uma falha de hardware",
+  "fan.stalled": "A velocidade medida continuou a zero após pedir o máximo",
+  "fan.hardwareMissing": "Leituras da ventoinha em falta ou ambíguas",
+  "fan.hardwareFailed": "Não foi possível confirmar o alvo da ventoinha",
+  "fan.recoveryFailed": "Não foi possível confirmar a reposição automática",
+  "fan.restoreDegraded": "Automático do EC restaurado; falhou a reposição do serviço do sistema",
+  "fan.monitorFailed": "O monitor de segurança está indisponível",
+  "fan.serviceFailed": "O serviço oficial não concluiu a mudança",
+  "fan.sleeping": "A velocidade máxima terminou para suspender",
+  "fan.ownerLost": "A proteção de recuperação restaurou o controlo automático",
   "sailing.title": "Modo de navegação",
   "sailing.loading": "A ler o controlo de carga…",
   "sailing.description": "Espera pelo limite inferior e depois carrega até ao limite do Steam. Ativar ou voltar a ligar dentro do intervalo não repõe a carga.",

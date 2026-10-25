@@ -14,6 +14,7 @@ import { updateView } from "./viewState";
 import { PowerFlowChart } from "./PowerFlowChart";
 import { QamThermal } from "./QamThermal";
 import { QamFanCurve } from "./QamFanCurve";
+import { FanControl } from "./FanControl";
 import type { PowerInfo } from "./types";
 import type { QamBlockId } from "./qamOrder";
 import { QamLayout } from "./QamLayout";
@@ -104,7 +105,7 @@ export function QamSummary() {
       </div>}
     </>,
     thermal: <QamThermal thermals={batteryInfo.data?.thermals ?? null} active={enabled} />,
-    fan: <QamFanCurve chip={batteryInfo.data?.thermals.chip_c ?? null} ssd={batteryInfo.data?.thermals.ssd_c ?? null} watts={summary.snapshot?.power_flow?.apu_w ?? null} rpm={batteryInfo.data?.thermals.fan_rpm ?? null} open={visible} />,
+    fan: <FanControl active={enabled}><QamFanCurve chip={batteryInfo.data?.thermals.chip_c ?? null} ssd={batteryInfo.data?.thermals.ssd_c ?? null} watts={summary.snapshot?.power_flow?.apu_w ?? null} rpm={batteryInfo.data?.thermals.fan_rpm ?? null} open={visible} /></FanControl>,
     specs: <PanelSectionRow>
       {/* @ts-expect-error Steam 导航树要显式 focusable，Decky 的 Focusable 类型没声明这个属性。 */}
       <Focusable className="pt-qam-spec" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "12px 16px" }} tabIndex={0} focusable aria-label={t("qam.specs")} onClick={() => openPage("power")} onOKButton={() => openPage("power")} onOKActionDescription={t("qam.openPower")}>

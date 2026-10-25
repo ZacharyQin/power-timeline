@@ -1,5 +1,8 @@
 import { callable } from "@decky/api";
-import type { Detail, History, Metric, PowerInfo, SailingStatus, Snapshot, Sort, Timeline } from "./types";
+import type { Detail, FanStatus, History, Metric, PowerInfo, SailingStatus, Snapshot, Sort, Timeline } from "./types";
+
+export const getFanStatus = callable<[], FanStatus>("get_fan_status");
+export const setFanMode = callable<[mode: "automatic" | "maximum"], FanStatus>("set_fan_mode");
 
 export const getSailingStatus = callable<[], SailingStatus>("get_sailing_status");
 export const updateNativeChargeSettings = callable<[enabled: boolean, limit: number], SailingStatus>("update_native_charge_settings");

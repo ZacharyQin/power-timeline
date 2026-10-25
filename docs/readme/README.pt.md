@@ -36,6 +36,10 @@ O controlo corre em segundo plano, independentemente das páginas abertas. Desli
 
 Seleciona **Ordem dos componentes do QAM** no fundo para ordenar os 10 componentes na própria página, sem abrir outra janela. Usa cima/baixo para escolher, **A** para pegar, cima/baixo para mover e **A** para largar. **B** desfaz o movimento atual; sem componente levantado, cancela todo o rascunho. **X** guarda e sai; **Y** repõe a ordem predefinida no rascunho. O rodapé nativo também mostra as teclas equivalentes. Durante a ordenação, o conteúdo continua visível, mas as ações normais ficam desativadas; com toque ou rato, seleciona o componente e usa os botões de movimento no próprio bloco. Os componentes ocultos mantêm uma posição identificada. A ordem guardada fica nesta Deck e os novos componentes são acrescentados no fim.
 
+O **Controlo da ventoinha** partilha o componente da curva existente no QAM: um título com o ícone da ventoinha e apenas dois separadores, **Automático do sistema** e **Velocidade máxima**. Não mostra indicações L1/R1, lista pendente, linha de RPM ou parágrafo explicativo. Esquerda/direita apenas move o foco; prime **A** para confirmar o modo. O gráfico completo só aparece no modo automático confirmado e fica oculto no máximo; mover o foco não altera a sua visibilidade. A posição guardada mantém-se. O máximo pede 7300 RPM, sem garantir uma leitura medida idêntica.
+
+O máximo continua com o QAM fechado. Selecionar automático ou descarregar o plugin restaura o modo automático anterior do sistema ou do EC. Um processo systemd independente e a limpeza de saída tratam da perda do backend; o modo de transferência de baixo consumo e os controladores externos detetados têm prioridade. A curva oficial e a ativação do serviço não são alteradas. Um bloqueio de atraso do logind pede a reposição antes de suspender; o máximo nunca é retomado automaticamente após reiniciar. A validação de suspensão/reinício controlados e dos comandos físicos/ecrã tátil continua pendente.
+
 <h2 id="install">Instalar</h2>
 
 ### Instalar o Decky primeiro
