@@ -1,6 +1,20 @@
-# 更新记录
+# Changelog / 更新记录
+
+> Changelog entries and release notes for future versions must include English first, followed by Chinese. The project owner decides when to release; creating or pushing release tags, release-related pushes, and publishing a GitHub Release require explicit approval. Completed development or verification is not release approval.
+>
+> 后续版本的更新记录和 Release 说明均使用双语，英文在前、中文在后。是否发布由项目所有者明确决定；创建／推送发布 tag、发布相关推送及 GitHub Release 均须明确授权，开发或验证完成不代表发布授权。
 
 ## 0.3.7 — 2026-10-25
+
+### English
+
+- Replace the shared README hero image with language-matched, on-device QAM screenshots for all six languages, using consistent framing and localized captions.
+- Add a fan-icon heading with only two native tabs, **System automatic** and **Maximum speed**. Omit L1/R1 hints, the dropdown, the extra RPM row and explanation text. Left/right only moves native focus; **A** confirms a mode change. Show the complete matching chart only when the backend has confirmed automatic mode, and hide it in maximum mode; moving focus does not change chart visibility. Report errors through native notifications, preserve the component ID and saved position, and update all six UI languages and READMEs.
+- Maximum mode requests 7300 RPM and continues with QAM closed. An independent transient systemd worker, backend lease and ExecStopPost handle abnormal exits: first write 0 to return control to the EC, then restore the original OS service state. A logind delay inhibitor requests restoration before sleep, and maximum mode is not replayed after restart. Do not change the official curve or permanently enable or disable the service.
+- Wait for the official service's stop job and ExecStopPost before taking control. Refuse takeover when a manual target, download mode, service transition or hardware fault is present. Relinquish control when an external target or service takeover is detected, without overwriting the new controller. Report restoration failures explicitly and distinguish degraded recovery that has already returned control to the EC.
+- All 102 backend tests, including 16 fan-boundary tests, five frontend regression tests, type checking and the build pass. On-device keyboard checks cover focus-only navigation, confirmation, chart visibility following the backend mode, and complete tab labels in the narrow QAM panel for all six languages. With QAM closed, the target remained 7300 RPM and the measured speed was 7352 RPM with no fault; confirming automatic restored automatic control. The earlier real 9/KILL check that restored the official automatic service remains valid. Controlled sleep/reboot and physical controller/touchscreen acceptance are still pending.
+
+### 中文
 
 - 六种语言的 README 头图由共用图片改为各自语言的实机 QAM 截图，统一取景并同步图片说明。
 - QAM 风扇组件增加带风扇图标的标题，下方仅保留“系统自动／最大转速”两个原生 Tab，不显示 L1/R1 提示、下拉框、转速读数与解释文字；左右只移动原生焦点，A 确认后才切档。完整匹配图仅在后台已确认的系统自动档显示，最大档隐藏，焦点移动不影响显隐；异常通过原生通知提示，保留原组件 ID、排序位置，六语界面与 README 同步说明。
