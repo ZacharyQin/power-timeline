@@ -35,14 +35,75 @@ def parse_fdinfo(text: str):
     return (device, client), engines
 
 
+def shortcut_names(data):
+    """Read names from binary shortcuts.vdf without treating metadata as running games."""
+    if not data:
+        raise ValueError("empty shortcut data")
+    names, path, offset = {}, [], 0
+    app_id, name = None, None
+    widths = {2: 4, 3: 4, 4: 4, 6: 4, 7: 8, 10: 8}
+    while offset < len(data):
+        kind = data[offset]
+        offset += 1
+        if kind == 8:
+            if not path:
+                if offset != len(data):
+                    raise ValueError("trailing shortcut data")
+                return names
+            if len(path) == 2 and path[0] == b"shortcuts" and app_id and name:
+                names[str(app_id)] = name
+                names[str((app_id << 32) | 0x02000000)] = name
+            path.pop()
+            continue
+        end = data.index(0, offset)
+        key = data[offset:end].lower()
+        offset = end + 1
+        if kind == 0:
+            path.append(key)
+            if len(path) == 2 and path[0] == b"shortcuts":
+                app_id, name = None, None
+            continue
+        shortcut = len(path) == 2 and path[0] == b"shortcuts"
+        if kind == 1:
+            end = data.index(0, offset)
+            if shortcut and key == b"appname":
+                name = data[offset:end].decode("utf-8").strip()[:512]
+            offset = end + 1
+        elif kind == 5:
+            end = offset
+            while end + 2 <= len(data) and data[end:end + 2] != b"\0\0":
+                end += 2
+            if end + 2 > len(data):
+                raise ValueError("incomplete shortcut string")
+            if shortcut and key == b"appname":
+                name = data[offset:end].decode("utf-16-le").lstrip("\ufeff").strip()[:512]
+            offset = end + 2
+        elif kind in widths:
+            width = widths[kind]
+            if offset + width > len(data):
+                raise ValueError("incomplete shortcut value")
+            if shortcut and key == b"appid" and kind == 2:
+                app_id = int.from_bytes(data[offset:offset + width], "little")
+            offset += width
+        else:
+            raise ValueError("unsupported shortcut value type")
+    if path:
+        raise ValueError("incomplete shortcut object")
+    return names
+
+
 class GameTracker:
     def __init__(self, proc_root: Path = Path("/proc"), steam_root: Path | None = None):
         self.proc_root = proc_root
-        self.steam_root = steam_root or Path.home() / ".steam/steam"
+        self.steam_root = steam_root or Path(os.environ.get("DECKY_USER_HOME") or Path.home()) / ".steam/steam"
         self._identities = {}
         self._names = {}
+        self._shortcut_files = {}
+        self._shortcut_names = {}
+        self.name_revision = 0
         self._scan_number = 0
         self._load_names()
+        self._refresh_shortcuts()
 
     def _load_names(self):
         roots = [self.steam_root / "steamapps"]
@@ -63,15 +124,58 @@ class GameTracker:
                 except OSError:
                     pass
 
+    def _refresh_shortcuts(self):
+        files = {}
+        for path in sorted((self.steam_root / "userdata").glob("*/config/shortcuts.vdf")):
+            cached = self._shortcut_files.get(path)
+            try:
+                info = path.stat()
+                signature = (info.st_mtime_ns, info.st_size)
+                if cached is None or signature != cached[0]:
+                    cached = (signature, shortcut_names(path.read_bytes()))
+            except (OSError, ValueError, UnicodeError):
+                # Steam may be rewriting this optional metadata; keep its last complete catalog.
+                if cached is None:
+                    continue
+            files[path] = cached
+        if files == self._shortcut_files:
+            return
+        self._shortcut_files = files
+        names, conflicts = {}, set()
+        for _, entries in files.values():
+            for identity, name in entries.items():
+                if identity in names and names[identity] != name:
+                    conflicts.add(identity)
+                names[identity] = name
+        for identity in conflicts:
+            del names[identity]
+        if names != self._shortcut_names:
+            self._shortcut_names = names
+            self.name_revision += 1
+
+    def resolve_names(self, identities):
+        """Resolve only requested identities; an ambiguous account mapping stays unknown."""
+        result = []
+        for identity in identities:
+            name = self._shortcut_names.get(identity, self._names.get(identity))
+            if name:
+                result.append({"game_id": identity, "name": name})
+        return result
+
     def observe_names(self, games):
         for game in games:
             identity = str(game.get("game_id", ""))
             name = game.get("name")
             if identity.isdigit() and isinstance(name, str) and name.strip():
-                self._names[identity] = name.strip()[:200]
+                name = name.strip()[:200]
+                if self._names.get(identity) != name:
+                    self._names[identity] = name
+                    self.name_revision += 1
 
     def scan(self) -> list:
         self._scan_number += 1
+        if self._scan_number % 5 == 0:
+            self._refresh_shortcuts()
         groups = {}
         current = {}
         for proc in self.proc_root.iterdir():
@@ -97,7 +201,7 @@ class GameTracker:
                 if not cached:
                     continue
                 group = groups.setdefault(cached, {
-                    "game_id": cached, "name": self._names.get(cached, f"游戏 {cached}"),
+                    "game_id": cached, "name": self._shortcut_names.get(cached, self._names.get(cached, f"游戏 {cached}")),
                     "processes": [], "cpu_total_ticks": None,
                     "gpu_complete": True, "gpu_clients": {}})
                 clients = {}

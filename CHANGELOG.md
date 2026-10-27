@@ -4,6 +4,22 @@
 >
 > 后续版本的更新记录和 Release 说明均使用双语，英文在前、中文在后。是否发布由项目所有者明确决定；创建／推送发布 tag、发布相关推送及 GitHub Release 均须明确授权，开发或验证完成不代表发布授权。
 
+## 0.3.10 — 2026-10-27
+
+### English
+
+- Read saved names for user-added non-Steam games from Steam's binary `shortcuts.vdf`. Resolve both the unsigned shortcut AppID and its full SteamGameId as exact strings, preserving the recorded identity rather than merging histories or guessing a title from an executable.
+- Locate the player's Steam directory through `DECKY_USER_HOME`, not the root backend's `HOME`. Refresh changed shortcut catalogs while the frontend is closed and backfill names for already-recorded games, including games first observed after backend startup.
+- Keep the last complete catalog during a partial rewrite; do not choose arbitrarily between conflicting account names. Removing a shortcut does not erase a name already stored in history. Metadata alone never creates a running game or session.
+- Preserve sample/session identities, observations, Wh and coverage. No database schema, chart layout or frontend naming workaround is added.
+
+### 中文
+
+- 从 Steam 二进制 `shortcuts.vdf` 读取用户添加的非 Steam 游戏名称；用精确字符串同时匹配无符号快捷方式 AppID 与完整 SteamGameId，保留原记录身份，不合并历史，也不凭可执行文件猜游戏名。
+- 通过 `DECKY_USER_HOME` 查找玩家的 Steam 目录，不再误用 root 后台的 `HOME`。前端关闭时仍检查快捷方式目录变化，为已有记录回填名称，也覆盖后台启动后才首次记录的游戏。
+- Steam 部分重写配置时保留上一份完整名称目录；不同账户的名称冲突不任意选取。删除快捷方式不会清除历史中已保存的有效名称；只有名称元数据不会产生运行游戏或会话。
+- 保留样本／会话身份、观测记录、Wh 与覆盖时长，不改数据库 schema、图表布局，也不增加前端猜名分支。
+
 ## 0.3.9 — 2026-10-27
 
 ### English

@@ -446,6 +446,8 @@ class Recorder:
                 self._retention_changed()
             else:
                 self.charging.observe(sample)
+                for game_id, game in games.items():
+                    self.names[game_id] = game["name"]
         except sqlite3.OperationalError as exc:
             if exc.sqlite_errorcode == sqlite3.SQLITE_BUSY or "locked" in str(exc).lower():
                 raise

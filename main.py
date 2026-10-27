@@ -82,6 +82,7 @@ class Plugin:
 
     async def _record_loop(self):
         previous, previous_games = None, []
+        names_revision = -1
         try:
             while not self._stopping:
                 began = time.monotonic()
@@ -91,6 +92,9 @@ class Plugin:
                 if previous is not None and discontinuity(previous, sample) is None:
                     estimates = self._attribution.between(previous, sample, previous_games, games)
                 try:
+                    if self._tracker.name_revision != names_revision:
+                        self._recorder.observe_games(self._tracker.resolve_names(self._recorder.names))
+                        names_revision = self._tracker.name_revision
                     self._recorder.ingest(sample, games, estimates)
                 except sqlite3.OperationalError as exc:
                     if exc.sqlite_errorcode != sqlite3.SQLITE_BUSY and "locked" not in str(exc).lower():
