@@ -1,5 +1,10 @@
-"""Observed sessions and measured intervals; graphs never drive the ledger."""
+"""Observed sessions and measured intervals; graphs never drive the ledger.
 
+Semantic index:
+- local: timeline-bounded-query -- Strict sample caps keep complete events/energy and break across omitted boundaries.
+"""
+
+from array import array
 from contextlib import closing
 from copy import copy
 import math
@@ -37,78 +42,112 @@ def validate_points(max_points):
     if isinstance(max_points, bool) or not isinstance(max_points, int) or not 2 <= max_points <= 10000:
         raise ValueError("max_points must be an integer between 2 and 10000")
 
-def bucket_series(points, start, bucket_seconds):
-    """One retained sample per bucket. Empty buckets and breaks stay disconnected."""
-    result, segment, last_bucket, last_source, held = [], 0, None, None, None
-    for point in points:
-        bucket = int((point["timestamp"] - start) // bucket_seconds)
+PLOT_QUERY = (
+    "SELECT id,timestamp,segment," + ",".join(NUMERIC_FIELDS) + ",break_reason_id "
+    "FROM samples WHERE timestamp>=? AND timestamp<=? ORDER BY timestamp,id"
+)
+
+
+def _bucket_rows(rows, start, bucket_seconds, strings):
+    """Select bucket tails without decoding rows that will be discarded."""
+    segment, last_bucket, last_source, held = 0, None, None, None
+    for row in rows:
+        bucket = int((row["timestamp"] - start) // bucket_seconds)
         gap = last_bucket is not None and bucket > last_bucket + 1
-        broken = bool(point.get("break_reason")) or point.get("battery_percent") is None or (
-            last_source is not None and point.get("segment") != last_source)
+        reason_id = row["break_reason_id"]
+        reason = strings[reason_id] if reason_id is not None else None
+        battery = row["battery_percent"]
+        source = row["segment"]
+        broken = bool(reason) or battery is None or (last_source is not None and source != last_source)
         if held is not None and (bucket != last_bucket or gap or broken):
-            result.append(held)
+            yield held, segment
             held = None
             if gap or broken:
                 segment += 1
-        if point.get("battery_percent") is not None and not point.get("break_reason"):
-            kept = dict(point)
-            kept["segment"] = segment
-            held = kept
-        last_bucket = bucket
-        last_source = point.get("segment")
+        if battery is not None and not reason:
+            held = row
+        last_bucket, last_source = bucket, source
     if held is not None:
-        result.append(held)
-    return result
+        yield held, segment
 
 
-def downsample(read_points, max_points):
-    """Bounded streaming selection retains segment breaks, nulls and extrema."""
-    required, previous, count = {0}, None, 0
-    extrema = {}
+def _limited_points(connection, reader, rows, max_points):
+    """Keep real endpoints/extrema; coarsen conservatively if boundaries exceed the budget."""
+    ids, segments, guards = array("q"), array("q"), array("q")
+    required, extrema, global_extrema = {0}, {}, {}
+    overflow = False
+    previous_segment, previous_mask, guard = None, None, 0
+
+    def require(indices):
+        nonlocal overflow
+        if not overflow:
+            required.update(indices)
+            if len(required) > max_points:
+                required.clear()
+                overflow = True
 
     def retain_extrema():
-        required.update(index for pair in extrema.values() for _, index in pair)
+        if not overflow:
+            for low, high in extrema.values():
+                require((low[1], high[1]))
 
-    for index, point in enumerate(read_points()):
-        count = index + 1
-        if previous and previous["segment"] != point["segment"]:
+    for index, (row, segment) in enumerate(rows):
+        changed = index > 0 and previous_segment != segment
+        if changed:
             retain_extrema()
             extrema.clear()
-        for key in NUMERIC_FIELDS:
-            value = point[key]
+        mask = 0
+        for bit, key in enumerate(NUMERIC_FIELDS):
+            value = row[key]
             if value is None:
+                mask |= 1 << bit
                 continue
-            if key not in extrema:
-                extrema[key] = [(value, index), (value, index)]
-            else:
-                if value < extrema[key][0][0]:
-                    extrema[key][0] = (value, index)
-                if value > extrema[key][1][0]:
-                    extrema[key][1] = (value, index)
-        if previous and (previous["segment"] != point["segment"] or any(
-            (previous[key] is None) != (point[key] is None) for key in NUMERIC_FIELDS
-        )):
-            required.update((index - 1, index))
-        if len(required) > max_points:
-            raise ValueError("max_points cannot preserve segment/null boundaries; increase the cap or narrow the range")
-        previous = point
+            for limits in (global_extrema, extrema) if not overflow else (global_extrema,):
+                if key not in limits:
+                    limits[key] = [(value, index), (value, index)]
+                else:
+                    if value < limits[key][0][0]:
+                        limits[key][0] = (value, index)
+                    if value > limits[key][1][0]:
+                        limits[key][1] = (value, index)
+        boundary = index > 0 and (changed or previous_mask != mask or row["break_reason_id"] is not None)
+        if boundary:
+            guard += 1
+            require((index - 1, index))
+        ids.append(row["id"])
+        segments.append(segment)
+        guards.append(guard)
+        previous_segment, previous_mask = segment, mask
+    count = len(ids)
     if not count:
         return []
     retain_extrema()
-    required.add(count - 1)
-    if len(required) > max_points:
-        raise ValueError("max_points cannot preserve segment/null boundaries; increase the cap or narrow the range")
+    require((count - 1,))
+    if overflow:
+        # A hard budget cannot keep every boundary. Never reconnect across an omitted one.
+        required = {0, count - 1}
+        for key in NUMERIC_FIELDS:
+            for _, index in global_extrema.get(key, ()):
+                if len(required) < max_points:
+                    required.add(index)
     remaining = min(max_points, count) - len(required)
     candidates = count - len(required)
-    chosen = {int((slot + 0.5) * candidates / remaining) for slot in range(remaining)} if remaining else set()
-    result, candidate = [], 0
-    for index, point in enumerate(read_points()):
-        if index in required:
-            result.append(point)
-        else:
-            if candidate in chosen:
-                result.append(point)
-            candidate += 1
+    excluded = sorted(required)
+    chosen = set(required)
+    offset = 0
+    for slot in range(remaining):
+        rank = int((slot + 0.5) * candidates / remaining)
+        index = rank + offset
+        while offset < len(excluded) and excluded[offset] <= index:
+            offset += 1
+            index = rank + offset
+        chosen.add(index)
+    result = []
+    for index in sorted(chosen):
+        row = connection.execute("SELECT * FROM samples WHERE id=?", (ids[index],)).fetchone()
+        point = reader.decode(row)
+        point["segment"] = guards[index] if overflow else segments[index]
+        result.append(point)
     return result
 
 
@@ -556,18 +595,16 @@ class Recorder:
         if start is None or end is None:
             raise ValueError("timeline requires start and end")
         validate_points(max_points)
+        if bucket_seconds is not None and (
+            isinstance(bucket_seconds, bool) or not isinstance(bucket_seconds, int) or bucket_seconds < 60
+        ):
+            raise ValueError("bucket_seconds must be an integer of at least 60")
         reader = SampleReader(self.db)
-        def read_points():
-            for row in self.db.execute(
-                "SELECT * FROM samples WHERE timestamp>=? AND timestamp<=? ORDER BY timestamp,id", (start, end)
-            ):
-                yield reader.decode(row)
-        if bucket_seconds is None:
-            points = downsample(read_points, max_points)
-        else:
-            if isinstance(bucket_seconds, bool) or not isinstance(bucket_seconds, int) or bucket_seconds < 60:
-                raise ValueError("bucket_seconds must be an integer of at least 60")
-            points = bucket_series(read_points(), start, bucket_seconds)
+        rows = self.db.execute(PLOT_QUERY, (start, end))
+        candidates = ((row, row["segment"]) for row in rows) if bucket_seconds is None else _bucket_rows(
+            rows, start, bucket_seconds, reader.strings
+        )
+        points = _limited_points(self.db, reader, candidates, max_points)
         events = []
         # Use ingestion order, not wall-clock ordering, to describe clock jumps honestly.
         for row in self.db.execute(
@@ -607,7 +644,10 @@ class Recorder:
                            "label": row["name"], "session_id": row["session_id"],
                            "game_id": row["game_id"], "last_seen": row["last_seen"]})
         energy, seconds = None, 0.0
-        for row in self.db.execute("SELECT * FROM intervals WHERE end>? AND start<?", (start, end)):
+        for row in self.db.execute(
+            "SELECT start,end,seconds,system_start_w,system_end_w FROM intervals "
+            "WHERE end>? AND start<? AND system_start_w IS NOT NULL", (start, end)
+        ):
             clipped = self._clip(row, start, end)
             if clipped and clipped[2] is not None:
                 energy = (energy or 0.0) + clipped[2]

@@ -11,7 +11,7 @@ with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
     for name in ("package.json", "pnpm-lock.yaml", "plugin.json", "tsconfig.json",
                  "rollup.config.js", "LICENSE", "CHANGELOG.md", "README.md", "main.py"):
         archive.write(root / name, name)
-    for directory in ("src", "py_modules", "scripts", "licenses", "docs/readme"):
+    for directory in ("src", "py_modules", "scripts", "tests", "licenses", "docs/readme"):
         for source in sorted((root / directory).rglob("*")):
             if source.is_file() and "__pycache__" not in source.parts:
                 archive.write(source, source.relative_to(root).as_posix())

@@ -4,6 +4,22 @@
 >
 > 后续版本的更新记录和 Release 说明均使用双语，英文在前、中文在后。是否发布由项目所有者明确决定；创建／推送发布 tag、发布相关推送及 GitHub Release 均须明确授权，开发或验证完成不代表发布授权。
 
+## 0.3.9 — 2026-10-27
+
+### English
+
+- Enforce `max_points` for both bucketed timelines and unbucketed/session-detail queries. Keep real first/last samples and retain boundaries and per-segment extrema when they fit; if the required set exceeds the budget, select across the whole range and conservatively separate samples across omitted segment, NULL or explicit-break boundaries. Never truncate the range or create synthetic samples.
+- Decode only the selected plot samples after scanning typed columns. Filter integration rows with `system_start_w IS NOT NULL` and select only the columns used by clipping; retain zero power, the original interpolation and accumulation order. Events, energy and covered time are independent of the plot cap.
+- Keep sampling, schema, read-only snapshot isolation, history-worker locking, frontend caching and event SQL unchanged. Include the regression tests in the matching-source archive.
+- Local package only: this build does not install or replace the Steam Deck package, or authorize a commit, push, tag or public release.
+
+### 中文
+
+- 分桶时间线与未分桶／会话详情查询均严格执行 `max_points`。保留真实首尾，预算足够时保留边界与分段极值；必要点集超过上限时，覆盖整个范围选点，并在被省略的分段、NULL 或明确断点处保守断线。不截断时间范围，不生成虚构样本。
+- 扫描类型化列后，仅解码最终选中的曲线样本。积分查询先筛选 `system_start_w IS NOT NULL`，只取裁剪所需列；保留零功率、原有插值与累加顺序。事件、能量与覆盖时长独立于曲线点数上限。
+- 采样、schema、只读快照隔离、历史 worker 锁、前端缓存和事件 SQL 不变。对应源码包一并包含回归测试。
+- 仅生成本地安装包：本次不安装或覆盖 Steam Deck 上的包，也不代表获准 commit、push、打 tag 或公开发布。
+
 ## 0.3.8 — 2026-10-26
 
 ### English

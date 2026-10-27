@@ -86,6 +86,8 @@ History uses native SQLite numeric columns, a string dictionary, and relational 
 
 The first time it is turned on, there is no earlier history. Use from before it was enabled is not filled in.
 
+Charts obey their sample budget: 288 in QAM and 600 on timeline and session-detail pages. They retain real endpoints, boundaries and extrema when the budget permits. If those exceed the budget, omitted boundaries stay disconnected rather than creating false continuity. Events, energy and covered time still use the complete history.
+
 <details>
 <summary>Touchscreen and other controls</summary>
 

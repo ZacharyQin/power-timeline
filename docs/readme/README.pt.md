@@ -86,6 +86,8 @@ O histórico usa colunas numéricas nativas de SQLite, um dicionário de texto e
 
 Na primeira vez não há histórico anterior. O uso de antes de ligar o plugin não é preenchido.
 
+Os gráficos respeitam o limite de amostras: 288 no QAM e 600 nas páginas da linha temporal e dos detalhes da sessão. Mantêm os extremos temporais, os limites e os valores extremos reais quando cabem. Se não couberem, os limites omitidos continuam desligados, sem criar continuidade falsa. Os eventos, a energia e o tempo coberto continuam a usar o histórico completo.
+
 <details>
 <summary>Ecrã tátil e outros controlos</summary>
 

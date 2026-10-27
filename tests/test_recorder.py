@@ -332,19 +332,28 @@ class RecorderTests(unittest.TestCase):
         self.assertEqual(reduced["coverage_seconds"], full["coverage_seconds"])
         self.assertEqual(reduced["system_wh"], full["system_wh"])
 
-    def test_downsampling_preserves_null_pairs_and_gap_endpoints_or_rejects_cap(self):
+    def test_small_caps_keep_real_endpoints_without_reconnecting_omitted_boundaries(self):
         for t in range(5):
             self.recorder.ingest(sample(t, cpu_w=None if t == 2 else 2), [], {})
         self.recorder.ingest(sample(10), [], {})
         self.recorder.ingest(sample(11), [], {})
         full = self.recorder.timeline(1000, 1011)
-        self.assertEqual(len(full["points"]), 7)
-        with self.assertRaisesRegex(ValueError, "preserve"):
-            self.recorder.timeline(1000, 1011, 3)
-        points = self.recorder.timeline(1000, 1011, 7)["points"]
-        self.assertIsNone(points[2]["cpu_w"])
-        self.assertNotEqual(points[4]["segment"], points[5]["segment"])
-        self.assertEqual(full["coverage_seconds"], 5)
+        for cap in (2, 3, 4, 7):
+            with self.subTest(cap=cap):
+                reduced = self.recorder.timeline(1000, 1011, cap)
+                self.assertEqual(len(reduced["points"]), cap)
+                self.assertEqual([reduced["points"][0]["timestamp"], reduced["points"][-1]["timestamp"]], [1000, 1011])
+                self.assertEqual(reduced["events"], full["events"])
+                self.assertEqual(reduced["system_wh"], full["system_wh"])
+                self.assertEqual(reduced["coverage_seconds"], 5)
+                for left, right in zip(reduced["points"], reduced["points"][1:]):
+                    if left["segment"] == right["segment"]:
+                        between = [p for p in full["points"] if left["timestamp"] <= p["timestamp"] <= right["timestamp"]]
+                        self.assertEqual(len({p["segment"] for p in between}), 1)
+                        if left["cpu_w"] is not None and right["cpu_w"] is not None:
+                            self.assertTrue(all(p["cpu_w"] is not None for p in between))
+        self.assertIsNone(full["points"][2]["cpu_w"])
+        self.assertNotEqual(full["points"][4]["segment"], full["points"][5]["segment"])
 
     def test_history_sort_pagination_detail_and_bounds(self):
         self.recorder.ingest(sample(0), [game()], {})
@@ -516,19 +525,40 @@ class RecorderTests(unittest.TestCase):
         events = self.recorder.timeline(1001.5, 1002)["events"]
         self.assertEqual(events, [{"kind": "supply", "timestamp": 1002, "end": None, "label": "battery"}])
 
-    def test_five_minute_buckets_keep_one_point_and_break_gaps(self):
-        from py_modules.recorder import bucket_series
-        rows = [
-            {"timestamp": 0, "segment": 1, "battery_percent": 90, "break_reason": None},
-            {"timestamp": 60, "segment": 1, "battery_percent": 89, "break_reason": None},
-            {"timestamp": 120, "segment": 1, "battery_percent": 88, "break_reason": None},
-            {"timestamp": 300, "segment": 1, "battery_percent": 80, "break_reason": None},
-            {"timestamp": 360, "segment": 1, "battery_percent": 79, "break_reason": None},
-            {"timestamp": 600, "segment": 1, "battery_percent": None, "break_reason": "gap"},
-            {"timestamp": 900, "segment": 1, "battery_percent": 70, "break_reason": None},
-        ]
-        points = bucket_series(rows, 0, 300)
-        self.assertEqual([point["timestamp"] for point in points], [120, 360, 900])
+    def test_bucketed_timeline_enforces_caps_and_retains_extrema_and_accounting(self):
+        self.recorder.sample_interval = 60
+        for minute in range(41):
+            self.recorder.ingest(sample(minute * 60, system_w=40 if minute == 17 else 12,
+                                        cpu_w=7 if minute == 29 else 2), [], {})
+        full = self.recorder.timeline(1000, 3400, bucket_seconds=60)
+        for cap in (2, 8):
+            with self.subTest(cap=cap):
+                reduced = self.recorder.timeline(1000, 3400, cap, bucket_seconds=60)
+                self.assertEqual(len(reduced["points"]), cap)
+                self.assertEqual(reduced["points"][0], full["points"][0])
+                self.assertEqual(reduced["points"][-1], full["points"][-1])
+                self.assertEqual(reduced["events"], full["events"])
+                self.assertEqual(reduced["system_wh"], full["system_wh"])
+                self.assertEqual(reduced["coverage_seconds"], full["coverage_seconds"])
+                if cap == 8:
+                    self.assertEqual(max(p["system_w"] for p in reduced["points"]), 40)
+                    self.assertEqual(max(p["cpu_w"] for p in reduced["points"]), 7)
+
+    def test_bucketed_small_cap_never_bridges_hidden_nulls_or_sample_gaps(self):
+        self.recorder.sample_interval = 60
+        for minute in (0, 1, 2, 3, 4, 10, 11, 12):
+            self.recorder.ingest(sample(minute * 60, cpu_w=None if minute == 3 else 2), [], {})
+        full = self.recorder.timeline(1000, 1720, bucket_seconds=60)
+        points = self.recorder.timeline(1000, 1720, 2, bucket_seconds=60)["points"]
+        self.assertEqual([p["timestamp"] for p in points], [full["points"][0]["timestamp"], 1720])
+        self.assertNotEqual(points[0]["segment"], points[1]["segment"])
+
+    def test_bucket_tails_stay_disconnected_across_missing_battery_samples(self):
+        self.recorder.sample_interval = 300
+        for t, battery in ((0, 90), (60, 89), (120, 88), (300, 80), (360, 79), (600, None), (900, 70)):
+            self.recorder.ingest(sample(t, battery_percent=battery), [], {})
+        points = self.recorder.timeline(1000, 1900, bucket_seconds=300)["points"]
+        self.assertEqual([point["timestamp"] for point in points], [1120, 1360, 1900])
         self.assertEqual([point["battery_percent"] for point in points], [88, 79, 70])
         self.assertEqual(points[0]["segment"], points[1]["segment"])
         self.assertNotEqual(points[1]["segment"], points[2]["segment"])
