@@ -151,4 +151,6 @@ python3 -m unittest discover -s tests -v
 
 ## 라이선스
 
-[BSD 3-Clause](../../LICENSE). Copyright (c) 2026, Zachary. 이것은 독립 플러그인이며 Valve, SteamOS, Decky의 공식 프로젝트가 아닙니다.
+[BSD 3-Clause](../../LICENSE)는 이 프로젝트의 소프트웨어에 적용됩니다. Copyright (c) 2026, Zachary. 이것은 독립 플러그인이며 Valve, SteamOS, Decky의 공식 프로젝트가 아닙니다.
+
+전체 페이지 화면에서 **설정 → 오픈 소스 라이선스**를 열면 저작자 표시와 원문을 오프라인으로 읽을 수 있습니다. 빌드 시 실제 포함 코드를 식별하고 호스트/시스템 구성 요소와 아이콘·그래픽을 구분합니다. 타사 코드는 자체 조건을 유지하며 Valve CAD 기반 그래픽에는 BSD가 아닌 별도의 **CC-BY-NC-SA-4.0**가 적용됩니다. 원문은 [`licenses/`](../../licenses/)에 있습니다. 설치 패키지에는 해당 앱/Decky API 소스와 [재빌드 안내](../../licenses/REBUILD.txt)를 담은 `dist/notices.json` 및 `dist/license-sources.zip`이 포함됩니다.

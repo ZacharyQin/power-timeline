@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Metric, Range, Sort, TimelineEvent } from "./types";
 
-export type Page = "timeline" | "power" | "flow" | "games" | "sessions" | "detail" | "help";
+export type Page = "timeline" | "power" | "flow" | "games" | "sessions" | "detail" | "help" | "settings" | "licenses";
 interface ViewState {
   page: Page;
   range: Range;
@@ -22,6 +22,7 @@ interface ViewState {
   focusByPage: Record<Page, string>;
   gamesOffset: number;
   sessionsOffset: number;
+  licenses: { entry: string | null; document: number | null };
 }
 
 export function rangeBounds(range: Range, now = Date.now() / 1000) {
@@ -39,7 +40,8 @@ let state: ViewState = {
   cursor: null, detailCursors: {}, hardware: false, metric: "system", sort: "recent",
   gameId: null, gameName: "", sessionId: null, detailOrigin: "timeline", helpOrigin: "timeline",
   event: null, focus: "range", gamesOffset: 0, sessionsOffset: 0,
-  focusByPage: { timeline: "range", power: "back", flow: "back", games: "history", sessions: "history", detail: "back", help: "back" },
+  licenses: { entry: null, document: null },
+  focusByPage: { timeline: "range", power: "back", flow: "back", games: "history", sessions: "history", detail: "back", help: "back", settings: "licenses", licenses: "license-entry-project" },
 };
 const listeners = new Set<() => void>();
 export function updateView(change: Partial<ViewState>) {
@@ -63,6 +65,11 @@ export function backPage() {
   const current = getView();
   if (current.page === "help") {
     updateView({ page: current.helpOrigin, focus: "help" });
+  } else if (current.page === "licenses") {
+    const { entry, document } = current.licenses;
+    if (document !== null) updateView({ licenses: { entry, document: null }, focus: `license-document-${document}` });
+    else if (entry) updateView({ licenses: { entry: null, document: null }, focus: `license-entry-${entry}` });
+    else updateView({ page: "settings", focus: "licenses" });
   } else if (current.page === "detail") {
     updateView({ page: current.detailOrigin, focus: current.detailOrigin === "timeline" ? "event" : `session:${current.sessionId}` });
   } else if (current.page === "sessions") {

@@ -60,8 +60,8 @@ export function BatteryTimeline({ visible }: { visible: boolean }) {
       </Focusable>
     </Focusable>
     <p className="pt-timeline-boundaries pt-muted">{view.live ? t("range.live") : t("range.fixed")} · {timeText(displayedBounds.start, true)} — {timeText(displayedBounds.end, true)}</p>
-    <PageQueryStatus loading={query.loading} error={query.error} retry={query.refresh} />
-    {query.data && <div className="pt-chart-panel"><TimeSeriesChart timeline={query.data} totals={false} showGames cursor={view.cursor} onCursor={(cursor) => updateView({ cursor, live: false, focus: "cursor" })} hardware={view.hardware} preferredFocus={view.focus === "cursor"} /></div>}
+    <PageQueryStatus loading={false} error={query.error} retry={query.refresh} />
+    <div className="pt-chart-panel"><TimeSeriesChart timeline={query.data ?? displayedBounds} totals={false} showGames cursor={view.cursor} onCursor={(cursor) => updateView({ cursor, live: false, focus: "cursor" })} hardware={view.hardware} preferredFocus={view.focus === "cursor"} /></div>
     <section className="pt-timeline-events" aria-labelledby="pt-timeline-events-title">
       <h2 className="pt-section-title" id="pt-timeline-events-title">{t("events.title")}</h2>
       {events.length === 0 ? <PageReading label={query.loading ? t("events.loading") : t("events.empty")} /> : <>

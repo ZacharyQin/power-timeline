@@ -151,4 +151,6 @@ python3 -m unittest discover -s tests -v
 
 ## 许可证
 
-[BSD 3-Clause](../../LICENSE)。Copyright (c) 2026, Zachary。这是独立插件，不是 Valve、SteamOS 或 Decky 的官方项目。
+[BSD 3-Clause](../../LICENSE) 适用于本项目的软件。Copyright (c) 2026, Zachary。这是独立插件，不是 Valve、SteamOS 或 Decky 的官方项目。
+
+在完整内页打开“**设置 → 开源许可**”，可离线阅读组件署名与许可原文。构建按实际随包代码生成清单，并区分宿主／系统组件与图标、素材许可。第三方代码保留原许可；基于 Valve CAD 改编的硬件素材单独适用 **CC-BY-NC-SA-4.0**，不适用软件 BSD。原始声明保存在 [`licenses/`](../../licenses/)，安装包包含 `dist/notices.json`、`dist/license-sources.zip`，提供对应的应用／Decky API 源码和[重建说明](../../licenses/REBUILD.txt)。

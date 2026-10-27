@@ -1,6 +1,7 @@
 """Decky backend: one recorder independent of UI visibility."""
 
 import asyncio
+import json
 import os
 import sqlite3
 import sys
@@ -196,6 +197,10 @@ class Plugin:
 
     async def set_sailing_mode(self, enabled, delta_percent=10):
         return await (await self._require_sailing()).set_mode(enabled, delta_percent)
+
+    async def get_open_source_notices(self):
+        path = Path(__file__).resolve().parent / "dist" / "notices.json"
+        return json.loads(await asyncio.to_thread(path.read_text, encoding="utf-8"))
 
     async def get_fan_status(self):
         await self._require_recorder()

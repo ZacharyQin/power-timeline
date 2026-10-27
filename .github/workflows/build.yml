@@ -48,8 +48,9 @@ jobs:
           package.parent.mkdir(exist_ok=True)
           members = [root / name for name in (
               "plugin.json", "package.json", "main.py", "LICENSE", "CHANGELOG.md",
-              "README.md", "docs/readme/README.zh-CN.md", "docs/readme/README.pt.md", "docs/readme/README.es.md", "docs/readme/README.ja.md", "docs/readme/README.ko.md", "dist/index.js", "dist/front-hardware.png", "dist/front-rotor.png", "dist/front-fan-front.png")]
+              "README.md", "docs/readme/README.zh-CN.md", "docs/readme/README.pt.md", "docs/readme/README.es.md", "docs/readme/README.ja.md", "docs/readme/README.ko.md", "dist/index.js", "dist/front-hardware.png", "dist/front-rotor.png", "dist/front-fan-front.png", "dist/notices.json", "dist/license-sources.zip")]
           members += sorted((root / "py_modules").glob("*.py"))
+          members += sorted(path for path in (root / "licenses").rglob("*") if path.is_file())
           with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
               for path in members:
                   archive.write(path, "power-timeline/" + path.relative_to(root).as_posix())

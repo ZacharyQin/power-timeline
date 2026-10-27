@@ -197,3 +197,16 @@ export interface PowerInfo {
   estimate: ChargeEstimate;
   errors: Record<string, string>;
 }
+
+export interface LicenseEntry {
+  id: string;
+  name: string;
+  version: string | null;
+  group: "project" | "bundled" | "icons" | "host" | "artwork";
+  host: boolean;
+  license: string;
+  source: string;
+  attribution: string;
+  note?: "rebuild" | "font-awesome" | "artwork";
+  documents: { title: string; text: string }[];
+}

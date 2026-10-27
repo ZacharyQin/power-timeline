@@ -1,5 +1,7 @@
 import { callable } from "@decky/api";
-import type { Detail, FanStatus, History, Metric, PowerInfo, SailingStatus, Snapshot, Sort, Timeline } from "./types";
+import type { Detail, FanStatus, History, LicenseEntry, Metric, PowerInfo, SailingStatus, Snapshot, Sort, Timeline } from "./types";
+
+export const getOpenSourceNotices = callable<[], { entries: LicenseEntry[] }>("get_open_source_notices");
 
 export const getFanStatus = callable<[], FanStatus>("get_fan_status");
 export const setFanMode = callable<[mode: "automatic" | "maximum"], FanStatus>("set_fan_mode");

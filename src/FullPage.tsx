@@ -33,6 +33,8 @@ export function FullPageStyles() {
     .pt-fullpage .pt-page-main { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; }
     .pt-fullpage .pt-page-scroll { flex: 1 1 0; min-width: 0; min-height: 0; overflow-y: auto; }
     .pt-fullpage .pt-page-content { box-sizing: border-box; padding: 0 20px 16px; }
+    .pt-fullpage .pt-license-row { min-width: 0; overflow-wrap: anywhere; align-items: center; }
+    .pt-fullpage .pt-license-chevron { display: block; }
     .pt-fullpage .pt-page-nav { box-sizing: border-box; width: 148px; flex: 0 0 148px; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 0 12px; border-right: 1px solid var(--pt-border); }
     .pt-fullpage .pt-page-nav > * { min-width: 0; }
     .pt-fullpage .pt-page-nav-title { margin: 0 0 12px; font-size: 12px; line-height: 18px; font-weight: 650; }

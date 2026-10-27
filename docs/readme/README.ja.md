@@ -151,4 +151,6 @@ python3 -m unittest discover -s tests -v
 
 ## ライセンス
 
-[BSD 3-Clause](../../LICENSE)。Copyright (c) 2026, Zachary。これは独立したプラグインであり、Valve、SteamOS、Decky の公式プロジェクトではありません。
+[BSD 3-Clause](../../LICENSE) は本プロジェクトのソフトウェアに適用されます。Copyright (c) 2026, Zachary。これは独立したプラグインであり、Valve、SteamOS、Decky の公式プロジェクトではありません。
+
+フルページ画面の「**設定 → オープンソースライセンス**」から、帰属表示とライセンス原文をオフラインで閲覧できます。ビルドは実際の同梱コードを識別し、ホスト／システムのコンポーネントとアイコン・画像素材を区別します。第三者コードは各自の条件を維持し、Valve CAD を改変した画像素材には BSD ではなく **CC-BY-NC-SA-4.0** が適用されます。原文は [`licenses/`](../../licenses/) に保存されています。インストールパッケージの `dist/notices.json` と `dist/license-sources.zip` には、対応するアプリ／Decky API ソースと[再ビルド手順](../../licenses/REBUILD.txt)が含まれます。

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import deckyPlugin from "@decky/rollup";
+import licenseNotices from "./scripts/license-notices.mjs";
 
 function frontAssets() {
   return {
@@ -16,4 +17,4 @@ function frontAssets() {
   };
 }
 
-export default deckyPlugin({ plugins: [frontAssets()] });
+export default deckyPlugin({ plugins: [frontAssets(), licenseNotices()] });

@@ -4,6 +4,26 @@
 >
 > 后续版本的更新记录和 Release 说明均使用双语，英文在前、中文在后。是否发布由项目所有者明确决定；创建／推送发布 tag、发布相关推送及 GitHub Release 均须明确授权，开发或验证完成不代表发布授权。
 
+## 0.3.8 — 2026-10-26
+
+### English
+
+- Add **Settings → Open-source licenses**, with native component lists, details and an offline full-text reader. Preserve the current reading level and focus across page visits; Back returns one level at a time. Localize the interface in all six languages without translating the license originals.
+- Center license-row chevrons against the complete title-and-description row, including settings and document entries, without changing text layout or navigation.
+- Render QAM and full-page timeline coordinates immediately from the selected time window, then update the same chart with recorded data. Keep query errors and retries, but do not invent samples, energy or coverage while history is pending. History caching and backend algorithms are unchanged.
+- Generate notices from code actually included in the bundle. Distinguish bundled Decky API and React Icons, Font Awesome SVG and Feather artwork, host/system-provided interfaces, and the Valve-CAD-derived hardware illustration. Do not present build-only dependencies as runtime code or assert host runtime versions.
+- Distribute original notices, LGPL-2.1 and CC-BY-4.0 texts, separate Valve artwork terms, and matching application/Decky API source with rebuild instructions in `dist/license-sources.zip`. The software BSD license does not relicense third-party code or the non-commercial/share-alike artwork. License reading is independent of recording and network availability.
+- This development build is not approval to tag, push or publish a release.
+
+### 中文
+
+- 增加“设置 → 开源许可”，提供原生组件列表、详情和离线全文阅读；保留阅读层级与焦点，返回逐级退回。界面覆盖六种语言，许可原文不翻译替代。
+- 许可条目右侧箭头相对“标题＋说明”的整行垂直居中，设置入口与文档条目同步生效，不改变文字布局和导航。
+- QAM 与内页时间线先按当前时间范围立即绘制空坐标，历史数据返回后原位更新曲线；保留查询错误与重试，不虚构样本、能量或覆盖时长。本次不改历史缓存和后台算法。
+- 根据实际进入 bundle 的代码生成声明；区分随包 Decky API、React Icons、Font Awesome SVG 与 Feather 图形、宿主／系统接口及基于 Valve CAD 改编的硬件示意素材，不把纯构建依赖列为运行代码，也不冒认宿主实际版本。
+- 随包保留原始声明、LGPL-2.1 与 CC-BY-4.0 全文、独立的 Valve 素材条款，以及 `dist/license-sources.zip` 内对应的应用／Decky API 源码和重建说明。软件 BSD 许可不改变第三方代码及非商业／相同方式共享素材的许可。许可阅读不依赖录制状态与网络。
+- 此开发版本不代表已获准打 tag、push 或公开发布。
+
 ## 0.3.7 — 2026-10-25
 
 ### English

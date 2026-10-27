@@ -151,4 +151,6 @@ python3 -m unittest discover -s tests -v
 
 ## Licença
 
-[BSD 3-Clause](../../LICENSE). Copyright (c) 2026, Zachary. Este é um plugin independente, não um projeto oficial da Valve, do SteamOS ou do Decky.
+[BSD 3-Clause](../../LICENSE) aplica-se ao software deste projeto. Copyright (c) 2026, Zachary. Este é um plugin independente, não um projeto oficial da Valve, do SteamOS ou do Decky.
+
+Na interface de página completa, abra **Definições → Licenças de código aberto** para ler atribuições e textos originais offline. A compilação identifica o código incluído e distingue componentes do anfitrião/sistema, ícones e gráficos. O código de terceiros mantém os seus termos; os gráficos derivados do CAD da Valve têm termos próprios **CC-BY-NC-SA-4.0**, não BSD. Os avisos originais estão em [`licenses/`](../../licenses/). O pacote instalado inclui `dist/notices.json` e `dist/license-sources.zip`, com o código correspondente da aplicação/Decky API e [instruções de recompilação](../../licenses/REBUILD.txt).

@@ -1,0 +1,27 @@
+Power Timeline hardware visualization attribution
+
+Files: src/assets/front-hardware.png, src/assets/front-rotor.png,
+src/assets/front-fan-front.png, and src/front-projection.svg.
+
+This layered visualization includes exterior shell geometry adapted from Valve's
+Steam Deck surface CAD released as steamdeck_*_20220202. The interior geometry
+is a project-created illustrative reconstruction of the OLED layout, not official
+OLED manufacturing CAD. Changes include an illustrative cutaway, reconstructed
+internal parts, material colours, orthographic projection and transparent layers.
+No thermal simulation or measured internal geometry is claimed.
+
+Original CAD attribution: Copyright 2019 Valve Corporation.
+Source: https://gitlab.steamos.cloud/SteamHardware/SteamDeck
+License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+The original Valve license and notice are retained as licenses/Valve-CAD.txt.
+
+The Valve material and adaptations are not relicensed under the application's
+BSD-3-Clause software license. Retain attribution, identify modifications, respect
+non-commercial and share-alike terms, and do not imply Valve endorsement.
+For a commercial product based on the CAD, consult Valve's original notice.
+
+An editable model is retained as licenses/assets/steam-deck-oled-thermal.glb and
+is included in dist/license-sources.zip. It preserves the Valve CAD attribution.
+The original raster-rendering scripts were not retained; the model is provided
+for inspection and adaptation, not as a claim of pixel-identical reproduction.

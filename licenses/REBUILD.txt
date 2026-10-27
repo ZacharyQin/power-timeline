@@ -1,0 +1,29 @@
+Power Timeline — matching source and LGPL rebuild materials
+
+The runtime ZIP includes dist/license-sources.zip. Extract it into a new directory.
+It contains the matching application source, build configuration and lockfile,
+plus the exact @decky/api package source and distribution in third-party/decky-api.
+The library is used under LGPL-2.1; it is not relicensed under the project BSD license.
+
+Rebuild the unmodified application:
+  pnpm install --frozen-lockfile
+  pnpm build
+
+Modify and relink the bundled library:
+  1. Edit third-party/decky-api/src. Keep its original notices and record changes.
+  2. From the extracted application root, run:
+       pnpm install --frozen-lockfile
+       pnpm exec tsc --project third-party/decky-api/tsconfig.json
+       pnpm link ./third-party/decky-api
+       pnpm build
+  3. Package the resulting dist/index.js with the application runtime files.
+     Keep the generated notices.json and license-sources.zip with the runtime ZIP.
+
+Node.js, pnpm, Python 3 and build dependencies are required. Dependency installation
+may access the registry; reading the installed licenses does not need the network.
+This source archive permits replacing the library; no production hardware setting
+is changed by rebuilding. Installation is a separate explicit action.
+
+@decky/api 1.1.3 upstream source commit:
+https://github.com/SteamDeckHomebrew/loader-api/tree/d1b7f16070777a0ada939cbacd3606eeba0574f5
+The upstream compiler configuration is retained alongside its source in the archive.

@@ -1,5 +1,6 @@
 import { useQuickAccessVisible } from "@decky/api";
 import { Focusable, Navigation, PanelSection, PanelSectionRow } from "@decky/ui";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { FaBatteryHalf, FaChartLine, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
 import { ChargeLimit } from "./QamChargeLimit";
@@ -10,7 +11,7 @@ import { useDocumentVisible, useQuery, useSnapshot } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
 import { LocaleFlags } from "./LocaleFlags";
 import { GameIcon } from "./GameIcon";
-import { updateView } from "./viewState";
+import { rangeBounds, updateView } from "./viewState";
 import { PowerFlowChart } from "./PowerFlowChart";
 import { QamThermal } from "./QamThermal";
 import { QamFanCurve } from "./QamFanCurve";
@@ -71,6 +72,7 @@ export function QamSummary() {
   const visible = useQuickAccessVisible();
   const documentVisible = useDocumentVisible();
   const enabled = visible && documentVisible;
+  const emptyTimelineBounds = useMemo(() => rangeBounds("1d"), [enabled]);
   const summary = useSnapshot(enabled);
   const day = useQuery("qam-battery-24h", () => {
     const end = Date.now() / 1000;
@@ -93,8 +95,8 @@ export function QamSummary() {
     "charge-limit": <ChargeLimit active={enabled} percent={sample?.battery_percent ?? null} charging={sample?.battery_state === "Charging"} />,
     timeline: <>
       <Reading padding="standard" icon={FaChartLine} label={t("qam.lastDay")} />
-      {day.data && <PanelSectionRow><TimeSeriesChart timeline={day.data} compact onOpen={openTimeline} /></PanelSectionRow>}
-      <QueryStatus padding="standard" loading={day.loading && !day.data} error={day.error} retry={day.refresh} />
+      <PanelSectionRow><TimeSeriesChart timeline={day.data ?? emptyTimelineBounds} compact onOpen={openTimeline} /></PanelSectionRow>
+      <QueryStatus padding="standard" loading={false} error={day.error} retry={day.refresh} />
     </>,
     games: <>
       {summary.snapshot?.sessions.length === 0 && <div className="pt-qam-game-empty">{t("qam.noGame")}</div>}

@@ -1,7 +1,7 @@
 import { DialogButtonSecondary, Focusable, GamepadButton } from "@decky/ui";
 import { Fragment, memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { FaClock, FaInfoCircle } from "react-icons/fa";
-import { IconLabel, PowerScaleLegend, Reading, Restrictions, SemanticText, SemanticValue, batteryStateText, durationText, reasonText, supplyText, timeText } from "./components";
+import { FaInfoCircle } from "react-icons/fa";
+import { IconLabel, PowerScaleLegend, Restrictions, SemanticText, SemanticValue, batteryStateText, durationText, reasonText, supplyText, timeText } from "./components";
 import { t, useLocale } from "./i18n";
 import type { MessageKey } from "./locales/en";
 import { PageReading } from "./FullPage";
@@ -11,9 +11,11 @@ import { chartSeries, hardwareSeries, semanticColors } from "./displaySemantics"
 import type { SeriesKey } from "./displaySemantics";
 import { getGameIntervals, isSleepEvent, timelineEventLabel } from "./timelineEvents";
 import type { SleepEvent } from "./timelineEvents";
-import type { GameTimelineEvent, Sample, Timeline } from "./types";
+import type { GameTimelineEvent, Sample, Timeline, TimelineEvent } from "./types";
 
 const seriesMessage = { battery_percent: "series.battery_percent", system_w: "series.system_w", apu_w: "series.apu_w", cpu_w: "series.cpu_w", soc_w: "series.soc_w", gpu_w: "series.gpu_w" } as const satisfies Record<SeriesKey, MessageKey>;
+const EMPTY_POINTS: Sample[] = [];
+const EMPTY_EVENTS: TimelineEvent[] = [];
 
 function padTime(value: number) {
   return String(value).padStart(2, "0");
@@ -111,7 +113,7 @@ function ChartGuide({ hardware, games, sleep, gaps }: { hardware: boolean; games
 }
 
 export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor, onCursor, hardware = false, compact = false, showGames = false, totals = true, onOpen, preferredFocus = false }: {
-  timeline: Timeline;
+  timeline: Timeline | Pick<Timeline, "start" | "end">;
   cursor?: number | null;
   onCursor?: (timestamp: number) => void;
   hardware?: boolean;
@@ -123,14 +125,17 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
 }) {
   const language = useLocale();
   const series = useMemo(() => hardware ? [chartSeries.system_w, ...hardwareSeries] : [chartSeries.system_w], [hardware]);
-  const { points, start, end } = timeline;
+  const { start, end } = timeline;
+  const data = "points" in timeline ? timeline : null;
+  const points = data?.points ?? EMPTY_POINTS;
+  const events = data?.events ?? EMPTY_EVENTS;
   const svgRef = useRef<SVGSVGElement>(null);
   const [plotWidth, setPlotWidth] = useState(compact ? 300 : 720);
   const hasPoints = points.length > 0;
-  const gaps = useMemo(() => timeline.events.filter((event) => event.kind === "gap" && event.timestamp < end && (event.end ?? end) > start), [timeline.events, start, end]);
+  const gaps = useMemo(() => events.filter((event) => event.kind === "gap" && event.timestamp < end && (event.end ?? end) > start), [events, start, end]);
   const sleeps = useMemo(() => gaps.filter(isSleepEvent), [gaps]);
   const hasSleep = sleeps.length > 0;
-  const gameIntervals = useMemo(() => showGames ? getGameIntervals(timeline) : null, [showGames, timeline.events, start, end, language]);
+  const gameIntervals = useMemo(() => showGames && data ? getGameIntervals(data) : null, [showGames, events, start, end, language]);
   const hasGameIntervals = Boolean(gameIntervals?.spans.length);
   const hasSystemReadings = compact || points.some((point) => point.system_w !== null);
   const batteryPoints = useMemo(() => points.filter((point) => point.battery_percent !== null), [points]);
@@ -258,7 +263,6 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
       {dots.map((dot, index) => <circle key={index} cx={dot.x} cy={dot.y} r="1.6" fill="currentColor" />)}
     </g>;
   };
-  if (!hasPoints && !hasSleep && !hasGameIntervals) return compact ? <Reading icon={FaClock} label={t("chart.noSamples")} description={t("chart.noSamplesDetail")} /> : <PageReading label={t("chart.noSamples")} description={t("chart.noSamplesDetail")} />;
   if (compact) {
     const scrubbed = batteryPoints.find((point) => point.timestamp === scrub) ?? null;
     const scrubX = scrubbed ? x(scrubbed.timestamp) : 0;
@@ -298,7 +302,7 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
       labeled.push(timestamp);
       previousLabel = position;
     }
-    const chart = <svg ref={svgRef} role="img" aria-label={`${t("chart.scrubAria")}${hasPoints ? "" : t("chart.scrubAriaSleep")}`} viewBox={`0 0 ${plotWidth} 132`} style={{ width: "100%", height: 132, minHeight: 132, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+    const chart = <svg ref={svgRef} role="img" aria-label={`${t("chart.scrubAria")}${!hasPoints && hasSleep ? t("chart.scrubAriaSleep") : ""}`} viewBox={`0 0 ${plotWidth} 132`} style={{ width: "100%", height: 132, minHeight: 132, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
       gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
       event.currentTarget.setPointerCapture(event.pointerId);
     }} onPointerMove={(event) => {
@@ -376,7 +380,7 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
       const next = points[Math.max(0, Math.min(points.length - 1, index + (button === GamepadButton.DIR_LEFT ? -1 : 1)))];
       onCursor(next.timestamp);
       return true;
-    }}><svg ref={svgRef} role="img" aria-label={`${t("chart.fullAria")}${showGames ? t("chart.fullAriaGames") : ""}${t("chart.fullAriaRest")}${hasPoints ? "" : t("chart.fullAriaEmpty")}`} viewBox={`0 0 ${plotWidth} 260`} style={{ width: "100%", height: 260, minHeight: 260, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
+    }}><svg ref={svgRef} role="img" aria-label={`${t("chart.fullAria")}${showGames ? t("chart.fullAriaGames") : ""}${t("chart.fullAriaRest")}${data && !hasPoints ? t("chart.fullAriaEmpty") : ""}`} viewBox={`0 0 ${plotWidth} 260`} style={{ width: "100%", height: 260, minHeight: 260, flexShrink: 0, display: "block", touchAction: "pan-y" }} onPointerDown={(event) => {
       gesture.current = { active: true, moved: false, startX: event.clientX, hover: false };
       event.currentTarget.setPointerCapture(event.pointerId);
     }} onPointerMove={(event) => {
@@ -456,9 +460,9 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
           <text x={valueX} y={labelY + 32} textAnchor={playing ? (placeLeft ? "end" : "start") : anchor} fontSize="11" opacity="0.82" stroke="none">{when}</text>
         </g>;
       })()}
-      {timeline.events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 120 : showGames ? 141 : 127} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${timelineEventLabel(event)}`}</title></circle>)}
+      {events.filter((event) => event.kind !== "gap" && (!showGames || event.kind !== "game" || (event.end ?? (event as GameTimelineEvent).last_seen) <= event.timestamp)).map((event, index) => <circle key={index} cx={Math.max(left, Math.min(right, x(event.timestamp)))} cy={event.kind === "game" ? 120 : showGames ? 141 : 127} r="3" fill="currentColor"><title>{`${timeText(event.timestamp)} ${timelineEventLabel(event)}`}</title></circle>)}
     </svg></Focusable>
-    <section className="pt-chart-auxiliary" aria-label={t("chart.readout")}>
+    {data && <section className="pt-chart-auxiliary" aria-label={t("chart.readout")}>
       <div className="pt-chart-readout" aria-live="polite">
         <div className="pt-chart-context">
           <strong>{selected ? t("chart.sample", { time: timeText(markerTime, true) }) : t("chart.noSample")}</strong>
@@ -476,8 +480,8 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
       </div>
       {gameIntervals && <GameLegend games={gameIntervals.games} />}
       <ChartGuide hardware={hardware} games={hasGameIntervals} sleep={hasSleep} gaps={gaps.some((event) => !isSleepEvent(event))} />
-    </section>
-    {totals && <PageReading label={t("chart.coverage")} className="pt-inline-facts">{t("chart.coverageValue", { covered: durationText(timeline.coverage_seconds), span: durationText(end - start) })} <SemanticValue value={timeline.system_wh} unit="Wh" role="system" /></PageReading>}
+    </section>}
+    {totals && data && <PageReading label={t("chart.coverage")} className="pt-inline-facts">{t("chart.coverageValue", { covered: durationText(data.coverage_seconds), span: durationText(end - start) })} <SemanticValue value={data.system_wh} unit="Wh" role="system" /></PageReading>}
     {selected && <Restrictions errors={selected.errors} label={t("chart.sampleStatus")} />}
   </>;
 });
