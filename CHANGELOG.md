@@ -1,8 +1,20 @@
 # Changelog / 更新记录
 
-> Changelog entries and release notes for future versions must include English first, followed by Chinese. The project owner decides when to release; creating or pushing release tags, release-related pushes, and publishing a GitHub Release require explicit approval. Completed development or verification is not release approval.
+> Version changes, package metadata and matching changelog entries must be committed together. Changelog entries and release notes use English first, followed by Chinese. Push owner-approved `v*` tags individually: each tag automatically builds its tagged commit and publishes the corresponding GitHub Release. Completing development or verification alone does not authorize creating or pushing tags.
 >
-> 后续版本的更新记录和 Release 说明均使用双语，英文在前、中文在后。是否发布由项目所有者明确决定；创建／推送发布 tag、发布相关推送及 GitHub Release 均须明确授权，开发或验证完成不代表发布授权。
+> 版本改动、版本号和对应更新记录必须一起提交；更新记录和 Release 说明均为英文在前、中文在后。经项目所有者授权后，逐个推送 `v*` 版本 tag：每个 tag 自动构建其对应提交并发布相应 GitHub Release。开发或验证完成本身不代表获准创建或推送 tag。
+
+## Unreleased
+
+### English
+
+- Separate tag publishing into a dedicated **Release** workflow that reuses the existing checked build pipeline. Each individually pushed `v*` tag produces an installable ZIP and publishes it with that version's complete bilingual changelog section; main-branch and pull-request builds do not publish releases.
+- Require the tag to exist remotely when publishing. Automated release creation does not create or retarget version tags.
+
+### 中文
+
+- 将 tag 发版拆为独立的 **Release** workflow，复用现有检查与构建流程。逐个推送的每个 `v*` tag 都生成可安装 ZIP，并以该版本完整的双语更新章节发布；main 分支和拉取请求仅构建，不发布 Release。
+- 发布时必须已存在对应远端 tag；自动发布流程不代建或改指向版本 tag。
 
 ## 0.3.11 — 2026-10-27
 

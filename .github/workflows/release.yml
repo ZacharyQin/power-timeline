@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: power-timeline
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          python3 - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          version = os.environ["GITHUB_REF"].removeprefix("refs/tags/v")
+          lines = Path("CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+          prefix = f"## {version}"
+          start = next((i for i, line in enumerate(lines) if line == prefix or line.startswith(prefix + " ")), None)
+          if start is None:
+              sys.exit(f"CHANGELOG.md has no section for {version}")
+          end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+          Path("release-notes.md").write_text("\n".join(lines[start:end]).strip() + "\n", encoding="utf-8")
+          PY
+          gh release create "$tag" dist/*.zip --verify-tag --repo "$GITHUB_REPOSITORY" --title "$tag" --notes-file release-notes.md
