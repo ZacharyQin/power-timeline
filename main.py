@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from py_modules.attribution import Attribution
 from py_modules.games import GameTracker
+from py_modules.game_icons import GameIcons
 from py_modules.recorder import Recorder, discontinuity
 from py_modules.telemetry import Telemetry
 from py_modules.power_info import PowerInfo
@@ -32,6 +33,7 @@ class Plugin:
         self._failure = None
         self._recorder = None
         self._tracker = None
+        self._game_icons = None
         self._power_info = None
         self._power_flow = None
         self._flow_snapshot = None
@@ -47,6 +49,7 @@ class Plugin:
             recorder.start()
             self._recorder = recorder
             self._tracker = GameTracker()
+            self._game_icons = GameIcons(self._tracker.steam_root)
             self._telemetry = Telemetry()
             self._power_info = PowerInfo(self._telemetry)
             self._power_flow = PowerFlow(self._telemetry)
@@ -172,6 +175,10 @@ class Plugin:
 
     async def get_session_detail(self, session_id, max_points=600):
         return await self._query_history(Recorder.session_detail, session_id, max_points)
+
+    async def get_game_icon(self, app_id, account_id, revision=None):
+        await self._require_recorder()
+        return await asyncio.to_thread(self._game_icons.read, app_id, account_id, revision)
 
     async def observe_games(self, games, source="", observed_at=0):
         recorder = await self._require_recorder()

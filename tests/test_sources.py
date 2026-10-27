@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from py_modules.attribution import Attribution
-from py_modules.games import GameTracker, parse_fdinfo, parse_stat, shortcut_names
+from py_modules.games import GameTracker, parse_fdinfo, parse_stat, shortcut_strings
 from py_modules.telemetry import decode_gpu_metrics
 from py_modules.recorder import Recorder
 from test_recorder import sample
@@ -216,10 +216,10 @@ class ShortcutNameTests(unittest.TestCase):
         original = path.read_bytes()
         wide = original.replace(b"\x01AppName\0" + title.encode("utf-8") + b"\0",
                                 b"\x05AppName\0" + title.encode("utf-16-le") + b"\0\0")
-        self.assertEqual(shortcut_names(wide)[str(app_id)], title)
+        self.assertEqual(shortcut_strings(wide, b"appname")[str(app_id)], title)
         for data in (b"", original[:-3], b"\0shortcuts\0\x02appid\0\x01"):
             with self.subTest(data=data), self.assertRaises(ValueError):
-                shortcut_names(data)
+                shortcut_strings(data, b"appname")
 
 
 if __name__ == "__main__":

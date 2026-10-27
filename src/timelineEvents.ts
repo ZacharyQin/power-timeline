@@ -47,7 +47,7 @@ export function getGameIntervals(timeline: Timeline) {
     if (!game) {
       let hash = 2166136261;
       for (let i = 0; i < gameEvent.game_id.length; i += 1) hash = Math.imul(hash ^ gameEvent.game_id.charCodeAt(i), 16777619);
-      game = { id: gameEvent.game_id, name: displayGameName(event.label, gameEvent.game_id), color: `hsl(${((hash >>> 0) / 4294967296 * 360).toFixed(2)} 60% 65%)` };
+      game = { id: gameEvent.game_id, name: event.label, color: `hsl(${((hash >>> 0) / 4294967296 * 360).toFixed(2)} 60% 65%)` };
       games.set(game.id, game);
     }
     let lane = 0;

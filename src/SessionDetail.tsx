@@ -1,11 +1,13 @@
 import { Focusable, Toggle } from "@decky/ui";
-import { FaBatteryHalf, FaBolt, FaCheckCircle, FaClock, FaDesktop, FaExclamationTriangle, FaGamepad, FaLayerGroup, FaMicrochip, FaMoon, FaPlug } from "react-icons/fa";
+import { FaBatteryHalf, FaBolt, FaCheckCircle, FaClock, FaDesktop, FaExclamationTriangle, FaLayerGroup, FaMicrochip, FaMoon, FaPlug } from "react-icons/fa";
 import { getSessionDetail } from "./backend";
+import { GameIcon } from "./GameIcon";
 import { IconLabel, Restrictions, SemanticText, SemanticValue, durationText, reasonText, sessionLabel, timeText } from "./components";
 import { displayGameName, t } from "./i18n";
 import { PageQueryStatus, PageReading } from "./FullPage";
 import { useQuery } from "./data";
 import { TimeSeriesChart } from "./TimeSeriesChart";
+import type { GameTimelineEvent } from "./types";
 import { getView, updateView, useView } from "./viewState";
 import { isSleepEvent, timelineEventLabel } from "./timelineEvents";
 
@@ -82,7 +84,7 @@ export function SessionDetail({ visible }: { visible: boolean }) {
         <div className="pt-session-summary">
           <div className="pt-session-identity">
             <div>
-              <h2><IconLabel icon={FaGamepad}>{displayGameName(session.name, session.game_id)}</IconLabel></h2>
+              <h2><IconLabel icon={<GameIcon gameId={session.game_id} />}>{displayGameName(session.name, session.game_id)}</IconLabel></h2>
               <p className="pt-muted">{timeText(session.started_at, true)} — {timeText(session.ended_at ?? session.last_seen, true)}</p>
             </div>
             <div className="pt-session-status">
@@ -122,7 +124,7 @@ export function SessionDetail({ visible }: { visible: boolean }) {
         <ol className="pt-session-event-list">
           {query.data.timeline.events.map((event, index) => <li className="pt-session-event" key={`${event.kind}:${event.timestamp}:${index}`}>
             <span className="pt-muted"><time dateTime={new Date(event.timestamp * 1000).toISOString()}>{timeText(event.timestamp, true)}</time>{event.end !== null && <time dateTime={new Date(event.end * 1000).toISOString()}>→ {timeText(event.end, true)}</time>}</span>
-            <span><IconLabel icon={isSleepEvent(event) ? FaMoon : event.kind === "gap" ? FaExclamationTriangle : event.kind === "supply" ? FaPlug : FaGamepad}>{timelineEventLabel(event)}</IconLabel>{isSleepEvent(event) && <span className="pt-muted"> · {durationText(event.end - event.timestamp)}</span>}</span>
+            <span><IconLabel icon={isSleepEvent(event) ? FaMoon : event.kind === "gap" ? FaExclamationTriangle : event.kind === "supply" ? FaPlug : <GameIcon gameId={(event as GameTimelineEvent).game_id} />}>{timelineEventLabel(event)}</IconLabel>{isSleepEvent(event) && <span className="pt-muted"> · {durationText(event.end - event.timestamp)}</span>}</span>
           </li>)}
         </ol>
       </section>

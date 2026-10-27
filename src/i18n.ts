@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { gameOverview } from "./gamePresentation";
 import { en, type MessageKey } from "./locales/en";
 import { es } from "./locales/es";
 import { ja } from "./locales/ja";
@@ -102,6 +103,8 @@ export function t(key: MessageKey, vars?: Record<string, string | number>): stri
 const unnamedGame = /^游戏 (\d+)$/;
 
 export function displayGameName(name: string, id?: string): string {
+  const currentName = gameOverview(id)?.display_name;
+  if (currentName?.trim()) return currentName;
   const match = unnamedGame.exec(name);
   if (match && (id === undefined || match[1] === id)) return t("game.unnamed", { id: match[1] });
   return name;

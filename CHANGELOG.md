@@ -4,6 +4,22 @@
 >
 > 后续版本的更新记录和 Release 说明均使用双语，英文在前、中文在后。是否发布由项目所有者明确决定；创建／推送发布 tag、发布相关推送及 GitHub Release 均须明确授权，开发或验证完成不代表发布授权。
 
+## 0.3.11 — 2026-10-27
+
+### English
+
+- Use Steam's current library display names for Steam and non-Steam games across QAM, history, session details, timeline labels, legends and tooltips. Keep recorded names when library metadata is unavailable; never reinterpret a user-chosen title as a generated placeholder.
+- Share one icon renderer across those views. Respect the icon currently selected in Steam shortcut properties before stale grid files; for Steam games prefer the current account's latest custom artwork before the store icon. Use a gamepad only when no image is available. Decode shortcut SteamGameIds exactly for presentation without changing stored game IDs or merging histories.
+- Read saved ICO and shortcut image files when Steam cannot serve them. Scope lookups to the active account, reject non-images and special files, bound image reads, and keep filesystem work off the recorder's event loop. Refresh visible metadata and omit unchanged image payloads.
+- Preserve recording, session identity, energy totals, coverage, database schema and hardware settings. This development build does not authorize a commit, push, tag or public release.
+
+### 中文
+
+- QAM、游戏历史、会话详情、时间线标签、图例和提示统一使用 Steam 当前资料库显示名，Steam 与非 Steam 游戏同样处理。资料不可用时保留已记录名称，不把用户自选的标题误当作生成占位名。
+- 上述入口共用图标组件：非 Steam 游戏优先使用 Steam 快捷方式属性中当前选定的图标，避免旧 grid 图片反压新选择；Steam 游戏优先使用当前账户最新的自定义图片，再回退商店图标。无可用图片时才显示手柄占位。完整快捷方式 SteamGameId 精确转换仅供展示查询，不修改历史游戏 ID，也不合并历史。
+- 补齐 Steam 无法直接提供的 ICO 和快捷方式图片读取；限定当前账户，拒绝非图片和特殊文件，限制单图读取体积，文件工作移至录制事件循环之外。可见资料持续刷新，图片未变时不重复传输内容。
+- 保留录制、会话身份、能量、覆盖时长、数据库 schema 和硬件设置；本开发版本不代表获准 commit、push、打 tag 或公开发布。
+
 ## 0.3.10 — 2026-10-27
 
 ### English

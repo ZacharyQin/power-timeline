@@ -88,6 +88,8 @@ Na primeira vez não há histórico anterior. O uso de antes de ligar o plugin n
 
 Os gráficos respeitam o limite de amostras: 288 no QAM e 600 nas páginas da linha temporal e dos detalhes da sessão. Mantêm os extremos temporais, os limites e os valores extremos reais quando cabem. Se não couberem, os limites omitidos continuam desligados, sem criar continuidade falsa. Os eventos, a energia e o tempo coberto continuam a usar o histórico completo.
 
+Os jogos Steam e não Steam usam os nomes atuais e os ícones personalizados da biblioteca Steam no QAM, no histórico e nas linhas temporais. Os nomes guardados nos atalhos também preenchem os registos existentes correspondentes, sem criar sessões nem alterar os totais de energia. Se os dados da biblioteca não estiverem disponíveis, mantém-se o nome registado; os ícones indisponíveis são substituídos por um comando.
+
 <details>
 <summary>Ecrã tátil e outros controlos</summary>
 

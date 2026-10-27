@@ -1,7 +1,8 @@
 import { DialogButtonSecondary, Dropdown, Focusable, NavEntryPositionPreferences } from "@decky/ui";
 import type { CSSProperties } from "react";
-import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaGamepad, FaSortAmountDown } from "react-icons/fa";
+import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaSortAmountDown } from "react-icons/fa";
 import { getGameHistory } from "./backend";
+import { GameIcon } from "./GameIcon";
 import { IconLabel, PowerScaleLegend, SemanticText, energyFields, metricIcons, metricLabel, metricOrder, sessionLabel, sortLabel, sortOrder, timeText, valueText } from "./components";
 import { displayGameName, t } from "./i18n";
 import { useQuery } from "./data";
@@ -79,7 +80,7 @@ export function GameHistory({ visible }: { visible: boolean }) {
         };
         const reading = powerSorted ? game.average_w : game[energyFields[view.metric]];
         return <DialogButtonSecondary key={game.game_id} className="pt-history-row" preferredFocus={view.focus === identity} onGamepadFocus={() => updateView({ focus: identity })} onClick={open} onOKActionDescription={t("history.openSessions")}>
-          <FaGamepad aria-hidden="true" />
+          <GameIcon gameId={game.game_id} />
           <span className="pt-history-copy"><span className="pt-history-title">{displayGameName(game.name, game.game_id)}</span><span className="pt-history-meta">{t("history.meta", { count: game.session_count, time: timeText(game.last_seen, true) })}</span></span>
           <HistoryValue value={reading} powerSorted={powerSorted} metric={view.metric} />
           <FaChevronRight className="pt-history-chevron" aria-hidden="true" />

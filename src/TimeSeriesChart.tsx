@@ -2,7 +2,7 @@ import { DialogButtonSecondary, Focusable, GamepadButton } from "@decky/ui";
 import { Fragment, memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FaInfoCircle } from "react-icons/fa";
 import { IconLabel, PowerScaleLegend, Restrictions, SemanticText, SemanticValue, batteryStateText, durationText, reasonText, supplyText, timeText } from "./components";
-import { t, useLocale } from "./i18n";
+import { displayGameName, t, useLocale } from "./i18n";
 import type { MessageKey } from "./locales/en";
 import { PageReading } from "./FullPage";
 import { GameIcon } from "./GameIcon";
@@ -405,14 +405,15 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
       <desc>{t("chart.fullDesc")}</desc>
       {gameIntervals?.spans.map(({ event, from, to, lane, game }) => {
         const begin = x(from), finish = x(to);
-        const description = t("chart.gameInterval", { name: game.name, start: timeText(event.timestamp, true), end: timeText(event.end ?? event.last_seen, true) });
+        const name = displayGameName(game.name, game.id);
+        const description = t("chart.gameInterval", { name, start: timeText(event.timestamp, true), end: timeText(event.end ?? event.last_seen, true) });
         return <g key={event.session_id} className="pt-game-interval" data-game-id={game.id} role="img" aria-label={description}>
           <title>{description}</title>
           <rect x={begin} y="16" width={finish - begin} height="221" fill={game.color} opacity="0.13" />
           <line x1={begin} x2={finish} y1={16 + lane * 3} y2={16 + lane * 3} stroke={game.color} strokeWidth="2" />
-          {lane < 2 && finish - begin >= game.name.length * 13 + 30 && <g aria-hidden="true">
+          {lane < 2 && finish - begin >= name.length * 13 + 30 && <g aria-hidden="true">
             <GameIcon gameId={game.id} svg x={begin + 4} y={112 + lane * 16} />
-            <text x={begin + 27} y={126 + lane * 16} fill="currentColor" fontSize="12">{game.name}</text>
+            <text x={begin + 27} y={126 + lane * 16} fill="currentColor" fontSize="12">{name}</text>
           </g>}
         </g>;
       })}
@@ -441,7 +442,8 @@ export const TimeSeriesChart = memo(function TimeSeriesChart({ timeline, cursor,
         const date = new Date(markerTime * 1000);
         const when = span > 36 * 3600 ? `${date.getMonth() + 1}/${date.getDate()} ${padTime(date.getHours())}:${padTime(date.getMinutes())}` : `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
         const playing = (gameIntervals?.spans ?? []).filter((spanItem) => markerTime >= spanItem.from && markerTime <= spanItem.to).sort((a, b) => b.from - a.from)[0];
-        const gameName = playing ? [...playing.game.name].slice(0, 18).join("") + ([...playing.game.name].length > 18 ? "…" : "") : "";
+        const characters = playing ? Array.from(displayGameName(playing.game.name, playing.game.id)) : [];
+        const gameName = characters.slice(0, 18).join("") + (characters.length > 18 ? "…" : "");
         const nameWidth = [...gameName].reduce((sum, char) => sum + (char.charCodeAt(0) > 255 ? 12 : 7), 0);
         const blockWidth = playing ? 22 + nameWidth : 0;
         const blockX = playing ? Math.max(left, Math.min(placeLeft ? textX - blockWidth : textX, right - blockWidth)) : textX;

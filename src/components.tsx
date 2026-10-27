@@ -57,8 +57,8 @@ const reasonDetails = {
 } as const satisfies Record<string, { group: ReasonGroup; key: MessageKey }>;
 const fieldKey = { system_w: "field.system_w", battery_w: "field.battery_w", battery_percent: "field.battery_percent", supply: "field.supply", apu_w: "field.apu_w", cpu_w: "field.cpu_w", soc_w: "field.soc_w", gpu_w: "field.gpu_w", input_w: "field.input_w", peripheral_w: "field.peripheral_w", battery_net_w: "field.battery_net_w" } as const satisfies Record<string, MessageKey>;
 export const reasonText = (code: string) => code in reasonDetails ? t(reasonDetails[code as keyof typeof reasonDetails].key) : code;
-export function IconLabel({ icon: Icon, children }: { icon: IconType; children: ReactNode }) {
-  return <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}><Icon aria-hidden="true" focusable="false" style={{ flexShrink: 0 }} /><span>{children}</span></span>;
+export function IconLabel({ icon: Icon, children }: { icon: IconType | ReactNode; children: ReactNode }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>{typeof Icon === "function" ? <Icon aria-hidden="true" focusable="false" style={{ flexShrink: 0 }} /> : Icon}<span>{children}</span></span>;
 }
 export function Restrictions({ reasons, errors, label }: { reasons?: readonly string[]; errors?: Record<string, string>; label?: string }) {
   const language = useLocale();

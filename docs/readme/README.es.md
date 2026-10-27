@@ -88,6 +88,8 @@ La primera vez no hay historial anterior. El uso de antes de encender el plugin 
 
 Los gráficos respetan el límite de muestras: 288 en QAM y 600 en las páginas de la línea temporal y de detalles de sesión. Conservan los extremos temporales, los límites y los valores extremos reales cuando caben. Si no caben, los límites omitidos siguen desconectados, sin crear una continuidad falsa. Los eventos, la energía y el tiempo cubierto siguen usando el historial completo.
 
+Los juegos de Steam y ajenos a Steam usan los nombres actuales y los iconos personalizados de la biblioteca de Steam en QAM, el historial y las líneas temporales. Los nombres guardados en los accesos directos también completan los registros existentes correspondientes, sin crear sesiones ni cambiar los totales de energía. Si los datos de la biblioteca no están disponibles, se conserva el nombre registrado; los iconos no disponibles se sustituyen por un mando.
+
 <details>
 <summary>Pantalla táctil y otros controles</summary>
 

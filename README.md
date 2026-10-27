@@ -88,7 +88,7 @@ The first time it is turned on, there is no earlier history. Use from before it 
 
 Charts obey their sample budget: 288 in QAM and 600 on timeline and session-detail pages. They retain real endpoints, boundaries and extrema when the budget permits. If those exceed the budget, omitted boundaries stay disconnected rather than creating false continuity. Events, energy and covered time still use the complete history.
 
-User-added non-Steam games use their saved Steam shortcut names. Matching existing records are renamed without creating another session or changing their energy totals.
+Steam and non-Steam games use their current Steam library names and custom icons throughout QAM, history and timelines. Saved shortcut names also fill matching existing records without creating another session or changing energy totals. If library metadata is unavailable, the recorded name remains; unavailable icons fall back to a gamepad.
 
 <details>
 <summary>Touchscreen and other controls</summary>

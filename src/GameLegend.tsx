@@ -2,7 +2,7 @@ import { DialogButtonSecondary, Focusable } from "@decky/ui";
 import { useId, useState } from "react";
 import { GameIcon } from "./GameIcon";
 import type { TimelineGame } from "./timelineEvents";
-import { t } from "./i18n";
+import { displayGameName, t } from "./i18n";
 
 const PREVIEW_SIZE = 2;
 const PAGE_SIZE = 6;
@@ -41,7 +41,7 @@ export function GameLegend({ games }: { games: readonly TimelineGame[] }) {
       {visible.map((game) => <span className="pt-game-key" role="listitem" key={game.id} data-game-id={game.id}>
         <span className="pt-game-swatch" style={{ backgroundColor: game.color }} aria-hidden="true" />
         <GameIcon gameId={game.id} />
-        <span className="pt-game-key-name">{game.name}</span>
+        <span className="pt-game-key-name">{displayGameName(game.name, game.id)}</span>
       </span>)}
     </div>
     {expanded && lastPage > 0 && <Focusable className="pt-game-legend-pager" flow-children="row">

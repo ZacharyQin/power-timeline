@@ -35,8 +35,8 @@ def parse_fdinfo(text: str):
     return (device, client), engines
 
 
-def shortcut_names(data):
-    """Read names from binary shortcuts.vdf without treating metadata as running games."""
+def shortcut_strings(data, field):
+    """Read a saved string field without treating metadata as running games."""
     if not data:
         raise ValueError("empty shortcut data")
     names, path, offset = {}, [], 0
@@ -66,8 +66,8 @@ def shortcut_names(data):
         shortcut = len(path) == 2 and path[0] == b"shortcuts"
         if kind == 1:
             end = data.index(0, offset)
-            if shortcut and key == b"appname":
-                name = data[offset:end].decode("utf-8").strip()[:512]
+            if shortcut and key == field:
+                name = data[offset:end].decode("utf-8").strip()[:4096]
             offset = end + 1
         elif kind == 5:
             end = offset
@@ -75,8 +75,8 @@ def shortcut_names(data):
                 end += 2
             if end + 2 > len(data):
                 raise ValueError("incomplete shortcut string")
-            if shortcut and key == b"appname":
-                name = data[offset:end].decode("utf-16-le").lstrip("\ufeff").strip()[:512]
+            if shortcut and key == field:
+                name = data[offset:end].decode("utf-16-le").lstrip("\ufeff").strip()[:4096]
             offset = end + 2
         elif kind in widths:
             width = widths[kind]
@@ -132,7 +132,7 @@ class GameTracker:
                 info = path.stat()
                 signature = (info.st_mtime_ns, info.st_size)
                 if cached is None or signature != cached[0]:
-                    cached = (signature, shortcut_names(path.read_bytes()))
+                    cached = (signature, {identity: name[:512] for identity, name in shortcut_strings(path.read_bytes(), b"appname").items()})
             except (OSError, ValueError, UnicodeError):
                 # Steam may be rewriting this optional metadata; keep its last complete catalog.
                 if cached is None:
