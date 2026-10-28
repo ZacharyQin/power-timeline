@@ -5,12 +5,17 @@ on:
     branches: [main]
   pull_request:
   workflow_call:
+    inputs:
+      ref:
+        description: Git ref to check out and build
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
+  group: build-${{ github.workflow }}-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +24,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - uses: pnpm/action-setup@v4
         with:
           version: 8
@@ -35,13 +42,15 @@ jobs:
       - run: pnpm build
       - run: python3 -m unittest discover -s tests -v
       - name: Package plugin ZIP
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref }}
         run: |
           python3 - <<'PY'
           import json, os, zipfile
           from pathlib import Path
           root = Path(".")
           version = json.loads((root / "package.json").read_text())["version"]
-          ref = os.environ.get("GITHUB_REF", "")
+          ref = os.environ["BUILD_REF"]
           if ref.startswith("refs/tags/") and ref != f"refs/tags/v{version}":
               raise SystemExit(f"{ref} does not match package.json version v{version}")
           package = root / "dist" / f"power-timeline-{version}.zip"
