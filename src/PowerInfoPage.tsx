@@ -8,6 +8,7 @@ import { useQuery } from "./data";
 import { PageQueryStatus, PageReading } from "./FullPage";
 import { chargeEstimateText, lastChargeReason, lastChargeText } from "./powerStatus";
 import { SailingControl } from "./SailingControl";
+import { BatteryHealthChart } from "./BatteryHealthChart";
 
 function capacityText(charge: number | null, energy: number | null) {
   if (charge === null) return energy === null ? t("common.notReported") : valueText(energy, "Wh");
@@ -92,6 +93,7 @@ export function PowerInfoPage({ visible }: { visible: boolean }) {
           <PageReading label={t("power.voltageCurrent")}>{valueText(battery.voltage_v, "V")} · {valueText(battery.current_a, "A")}</PageReading>
         </section>
       </div>
+      <BatteryHealthChart visible={visible} />
       <div className="pt-power-charge" aria-label={t("power.chargeLog")}>
         <IconLabel icon={FaClock}>{t("power.chargeLog")}</IconLabel>
         <span className="pt-power-charge-value">{charging ? t("power.chargingNow") : info.last_charge.ended_at === null ? t("power.chargeEndUnknown") : t("power.lastEnded", { time: timeText(info.last_charge.ended_at, true) })}</span>

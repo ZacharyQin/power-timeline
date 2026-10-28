@@ -1,7 +1,7 @@
 Power Timeline hardware visualization attribution
 
-Files: src/assets/front-hardware.png, src/assets/front-rotor.png,
-src/assets/front-fan-front.png, and src/front-projection.svg.
+Files: src/assets/front-hardware.webp, src/assets/front-rotor.webp,
+src/assets/front-fan-front.webp, and src/front-projection.svg.
 
 This layered visualization includes exterior shell geometry adapted from Valve's
 Steam Deck surface CAD released as steamdeck_*_20220202. The interior geometry
@@ -21,7 +21,10 @@ BSD-3-Clause software license. Retain attribution, identify modifications, respe
 non-commercial and share-alike terms, and do not imply Valve endorsement.
 For a commercial product based on the CAD, consult Valve's original notice.
 
-An editable model is retained as licenses/assets/steam-deck-oled-thermal.glb and
-is included in dist/license-sources.zip. It preserves the Valve CAD attribution.
-The original raster-rendering scripts were not retained; the model is provided
-for inspection and adaptation, not as a claim of pixel-identical reproduction.
+Editable design sources are retained in the source repository at
+licenses/assets/steam-deck-oled-thermal.glb and src/front-projection.svg:
+https://github.com/ZacharyQin/power-timeline
+They preserve the Valve CAD attribution. Plugin builds use three lossless WebP
+layers, retaining the PNG inputs' visible pixels and transparency. These WebP
+build inputs are included in the separate matching-source archive. Original PNGs,
+the design model and projection remain in the source repository.

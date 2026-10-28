@@ -90,7 +90,10 @@ export default function licenseNotices() {
       if (!apiRoot) throw new Error("Bundled Decky API source was not identified");
       const sources = execFileSync("python3", [join(root, "scripts/license-sources.py"), apiRoot], { cwd: root, maxBuffer: 32 * 1024 * 1024 });
       this.emitFile({ type: "asset", fileName: "license-sources.zip", source: sources });
-      this.emitFile({ type: "asset", fileName: "notices.json", source: JSON.stringify({ entries }, null, 2) + "\n" });
+      const sourceName = `power-timeline-${own.version}-sources.zip`;
+      const sourceArchive = { name: sourceName,
+        url: `https://github.com/ZacharyQin/power-timeline/releases/download/v${own.version}/${sourceName}` };
+      this.emitFile({ type: "asset", fileName: "notices.json", source: JSON.stringify({ entries, sourceArchive }, null, 2) + "\n" });
     },
   };
 }

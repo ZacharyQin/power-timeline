@@ -1,13 +1,23 @@
 Power Timeline — matching source and LGPL rebuild materials
 
-The runtime ZIP includes dist/license-sources.zip. Extract it into a new directory.
-It contains the matching application source, build configuration and lockfile,
-plus the exact @decky/api package source and distribution in third-party/decky-api.
+Download power-timeline-VERSION-sources.zip from the same versioned release:
+https://github.com/ZacharyQin/power-timeline/releases/tag/vVERSION
+The offline license page identifies the exact source filename and download URL.
+Extract this source archive into a new directory. It contains the matching
+application source, build configuration and lockfile, plus the exact @decky/api
+package source and distribution in third-party/decky-api.
 The library is used under LGPL-2.1; it is not relicensed under the project BSD license.
 
 Rebuild the unmodified application:
   pnpm install --frozen-lockfile
   pnpm build
+  pnpm package
+
+The packaging command validates the matching-source archive and uses the same
+runtime manifest as CI. Package inputs are selected by scripts/package_files.py;
+.packageignore excludes caches, debug files and non-build authoring assets.
+The source archive retains the WebP build inputs in src/assets. Original PNGs,
+the editable GLB and projection SVG remain in the source repository.
 
 Modify and relink the bundled library:
   1. Edit third-party/decky-api/src. Keep its original notices and record changes.
@@ -16,8 +26,9 @@ Modify and relink the bundled library:
        pnpm exec tsc --project third-party/decky-api/tsconfig.json
        pnpm link ./third-party/decky-api
        pnpm build
-  3. Package the resulting dist/index.js with the application runtime files.
-     Keep the generated notices.json and license-sources.zip with the runtime ZIP.
+       pnpm package
+  3. Distribute both generated versioned ZIPs: the installable runtime ZIP and
+     the matching -sources.zip. The runtime retains notices.json for offline reading.
 
 Node.js, pnpm, Python 3 and build dependencies are required. Dependency installation
 may access the registry; reading the installed licenses does not need the network.

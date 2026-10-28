@@ -24,6 +24,8 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 
 对照当前满充容量、设计容量和容量比，为判断电池容量有没有衰减提供参考。这里关心的是充满后能装下多少电，而不是此刻剩余多少电。
 
+**电源与电池**内页的**电池健康度曲线**可查看最近 30 天、90 天、1 年或全部记录的满充／设计容量比。后台按本地日历日保留当天最后一次有效读数，关闭页面后仍记录。每日健康度单独存于 `battery-health.sqlite3`，不随功率历史滚动清理；未记录的日期保留断线。
+
 **放着、玩游戏时，电量分别怎么掉的？**
 
 回看最近 1、3、7 天的电量曲线，对照游戏运行、供电变化和休眠时段，看看哪一段掉电明显，当时在做什么。休眠区间可以对照前后电量，期间不连续采样，也不补算耗电。游戏记录里还可以查看各游戏的用电估算。
@@ -48,7 +50,7 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 
 ### 下载安装包
 
-打开 [最新 Release](https://github.com/ZacharyQin/power-timeline/releases/latest)。下载文件名以 `power-timeline-` 开头、以 `.zip` 结尾的安装包。不要下载页面上的 Source code (zip)。那是源码，不能装进 Decky。
+打开 [最新 Release](https://github.com/ZacharyQin/power-timeline/releases/latest)。下载 `power-timeline-<version>.zip` 安装包；单独的 `power-timeline-<version>-sources.zip` 用于重建。不要下载页面上的 Source code (zip)。那是源码，不能装进 Decky。
 
 如果这个 ZIP 是在另一台电脑上下的，先把它拷到 Steam Deck 上。
 
@@ -62,7 +64,7 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 4. 左侧这时会出现「开发者」。打开它。
 5. 在「第三方插件」里找到「从 ZIP 压缩文件安装插件」，选「浏览文件」。
 6. 对话框会说明 Decky 没有审核这个插件。第一次要等大约 5 秒才能继续。
-7. 选中以 `power-timeline-` 开头的那个 ZIP。
+7. 选中 `power-timeline-<version>.zip`。
 
 装好以后，回到插头图标下的列表，打开 **Power Timeline**。
 
@@ -88,7 +90,7 @@ Power Timeline 是 Steam Deck 上的 Decky 插件。它让你对照电池的满�
 
 曲线严格限制显示点数：QAM 最多 288 点，时间线与会话详情最多 600 点。预算允许时保留真实首尾、边界与极值；无法全部容纳时，被省略的边界仍保持断线，不制造连续曲线。事件、能量和覆盖时长仍按完整历史计算。
 
-Steam 与非 Steam 游戏在 QAM、历史和时间线中统一显示 Steam 资料库当前的名称与自定义图标。已保存的快捷方式名称也会为匹配的已有历史补名，不新建会话，也不改变用电统计。资料不可用时保留已记录名称，图标不可用时显示手柄占位。
+Steam 与非 Steam 游戏在 QAM、历史和时间线中统一显示 Steam 资料库当前的名称与自定义图标。已保存的快捷方式名称也会为匹配的已有历史补名，不新建会话，也不改变用电统计。资料不可用时保留已记录名称。成功显示的图标按 Steam 账户和游戏保存至 `game-icons.sqlite3`；当前自定义图和原生图优先，原来源失效时先用缓存，最后才显示手柄占位，插件重启后缓存仍保留。
 
 <details>
 <summary>触屏与其他操作</summary>
@@ -147,9 +149,10 @@ pnpm install --registry=https://registry.npmjs.org
 pnpm typecheck
 pnpm build
 python3 -m unittest discover -s tests -v
+pnpm package
 ```
 
-`pnpm build` 生成前端。把运行文件打进 ZIP 再安装。不要把数据库放进插件目录。
+`pnpm build` 生成前端，`pnpm package` 生成安装 ZIP 和独立匹配源码 ZIP。不要把数据库放进插件目录。
 
 </details>
 
@@ -157,4 +160,4 @@ python3 -m unittest discover -s tests -v
 
 [BSD 3-Clause](../../LICENSE) 适用于本项目的软件。Copyright (c) 2026, Zachary。这是独立插件，不是 Valve、SteamOS 或 Decky 的官方项目。
 
-在完整内页打开“**设置 → 开源许可**”，可离线阅读组件署名与许可原文。构建按实际随包代码生成清单，并区分宿主／系统组件与图标、素材许可。第三方代码保留原许可；基于 Valve CAD 改编的硬件素材单独适用 **CC-BY-NC-SA-4.0**，不适用软件 BSD。原始声明保存在 [`licenses/`](../../licenses/)，安装包包含 `dist/notices.json`、`dist/license-sources.zip`，提供对应的应用／Decky API 源码和[重建说明](../../licenses/REBUILD.txt)。
+在完整内页打开“**设置 → 开源许可**”，可离线阅读组件署名与许可原文。构建按实际随包代码生成清单，并区分宿主／系统组件与图标、素材许可。第三方代码保留原许可；基于 Valve CAD 改编的硬件素材单独适用 **CC-BY-NC-SA-4.0**，不适用软件 BSD。原始声明保存在 [`licenses/`](../../licenses/)，安装包包含供离线阅读的 `dist/notices.json`；同一 Release 单独提供 `power-timeline-<version>-sources.zip`，包含对应的应用／Decky API 源码和[重建说明](../../licenses/REBUILD.txt)。

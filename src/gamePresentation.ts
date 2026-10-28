@@ -30,16 +30,17 @@ export function gameOverview(gameId?: string): GameOverview | null {
   return appId === null ? null : presentationStore()?.GetAppOverviewByAppID(appId) ?? null;
 }
 
-export function gameIconSources(app: GameOverview | null, saved?: string | null): string[] {
+export function gameIconSources(app: GameOverview | null, saved?: string | null, cached = false): string[] {
   const store = presentationStore();
   if (!app || !store) return saved ? [saved] : [];
-  const sources = store.GetCustomImageURLs?.(app, "_icon") ?? [];
-  if (saved && !sources.includes(saved)) sources.unshift(saved);
+  const sources = [...(store.GetCustomImageURLs?.(app, "_icon") ?? [])];
+  if (saved && !cached && !sources.includes(saved)) sources.unshift(saved);
   const icon = store.GetIconURLForApp(app);
   if (icon && !sources.includes(icon)) {
     if (app.icon_data && !app.icon_hash) sources.unshift(icon);
     else sources.push(icon);
   }
+  if (saved && cached && !sources.includes(saved)) sources.push(saved);
   return sources;
 }
 

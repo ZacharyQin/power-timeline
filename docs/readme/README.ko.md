@@ -24,6 +24,8 @@ Power Timeline은 Steam Deck용 Decky 플러그인입니다. 배터리의 완충
 
 현재 완충 용량, 설계 용량, 두 값의 비율을 비교해 배터리 용량이 줄었는지 판단할 때 참고할 수 있습니다. 여기서 보는 것은 완충했을 때 저장할 수 있는 양이지, 지금 남아 있는 잔량이 아닙니다.
 
+**전원과 배터리** 페이지의 건강도 그래프에서 최근 30일, 90일, 1년 또는 전체 기록의 완충/설계 용량 비율을 볼 수 있습니다. 페이지를 닫아도 백엔드는 현지 날짜마다 마지막 유효한 값을 저장합니다. 일별 기록은 `battery-health.sqlite3`에 따로 저장되어 오래된 전력 기록이 삭제되어도 유지되며, 기록이 없는 날짜는 선으로 잇지 않습니다.
+
 **그냥 놔뒀을 때와 게임할 때, 배터리는 어떻게 줄어들까?**
 
 최근 1일, 3일, 7일의 잔량 변화를 게임 실행, 전원 연결 변화, 절전 구간과 함께 볼 수 있습니다. 어느 구간에서 많이 줄었는지, 그때 무엇을 하고 있었는지 되돌아볼 수 있습니다. 절전 구간은 전후 잔량을 비교할 수 있지만, 그동안 연속 측정하거나 사용 에너지를 보충 계산하지 않습니다. 게임 기록에서는 각 게임의 에너지 추정도 볼 수 있습니다.
@@ -48,7 +50,7 @@ Decky가 없으면 공식 [Decky Loader](https://github.com/SteamDeckHomebrew/de
 
 ### 패키지 받기
 
-[최신 Release](https://github.com/ZacharyQin/power-timeline/releases/latest)를 엽니다. 이름이 `power-timeline-`으로 시작하고 `.zip`으로 끝나는 파일을 받습니다. Source code (zip)은 받지 마세요. 그것은 소스이며 Decky에 설치할 수 없습니다.
+[최신 Release](https://github.com/ZacharyQin/power-timeline/releases/latest)를 엽니다. 설치용 `power-timeline-<version>.zip`을 받습니다. 별도 `power-timeline-<version>-sources.zip`은 재빌드용입니다. Source code (zip)은 받지 마세요. 그것은 소스이며 Decky에 설치할 수 없습니다.
 
 다른 컴퓨터에서 ZIP을 받았다면 먼저 Steam Deck으로 복사합니다.
 
@@ -62,7 +64,7 @@ Decky가 없으면 공식 [Decky Loader](https://github.com/SteamDeckHomebrew/de
 4. 왼쪽 목록에 "개발자"가 나타납니다. 그것을 엽니다.
 5. "서드파티 플러그인"에서 "ZIP 파일에서 플러그인 설치"를 찾고 "검색"을 고릅니다.
 6. Decky가 이 플러그인을 검토하지 않았다는 안내가 나옵니다. 처음에는 약 5초를 기다려야 계속할 수 있습니다.
-7. 이름이 `power-timeline-`으로 시작하는 ZIP을 고릅니다.
+7. `power-timeline-<version>.zip`을 고릅니다.
 
 설치한 뒤 플러그 아이콘 아래 목록으로 돌아가 **Power Timeline**을 엽니다.
 
@@ -88,7 +90,7 @@ Decky가 없으면 공식 [Decky Loader](https://github.com/SteamDeckHomebrew/de
 
 곡선은 QAM에서 최대 288개, 타임라인과 세션 상세에서 최대 600개의 점만 표시합니다. 한도 안에서 실제 시작점·끝점, 경계와 최솟값·최댓값을 유지합니다. 모두 담을 수 없으면 생략한 경계를 가로질러 선을 잇지 않아 거짓 연속성을 만들지 않습니다. 이벤트, 에너지와 기록된 시간은 계속 전체 이력으로 계산합니다.
 
-Steam 게임과 비 Steam 게임 모두 QAM, 기록과 타임라인에서 현재 Steam 라이브러리 이름과 사용자 지정 아이콘을 표시합니다. 저장된 바로가기 이름은 해당 기존 기록에도 반영되며 세션을 새로 만들거나 에너지 합계를 바꾸지 않습니다. 라이브러리 정보를 읽을 수 없으면 기록된 이름을 유지하고, 아이콘을 읽을 수 없으면 게임패드 아이콘을 표시합니다.
+Steam 게임과 비 Steam 게임 모두 QAM, 기록과 타임라인에서 현재 Steam 라이브러리 이름과 사용자 지정 아이콘을 표시합니다. 저장된 바로가기 이름은 해당 기존 기록에도 반영되며 세션을 새로 만들거나 에너지 합계를 바꾸지 않습니다. 라이브러리 정보를 읽을 수 없으면 기록된 이름을 유지합니다. 정상적으로 표시된 아이콘은 Steam 계정과 게임별로 `game-icons.sqlite3`에 저장됩니다. 현재 사용자 지정 및 기본 아이콘이 우선하며, 원본을 사용할 수 없으면 저장된 이미지를 쓰고 마지막으로 게임패드 아이콘을 표시합니다. 캐시는 플러그인을 재시작해도 유지됩니다.
 
 <details>
 <summary>터치와 다른 조작</summary>
@@ -147,9 +149,10 @@ pnpm install --registry=https://registry.npmjs.org
 pnpm typecheck
 pnpm build
 python3 -m unittest discover -s tests -v
+pnpm package
 ```
 
-`pnpm build`가 프론트엔드를 만듭니다. 실행 파일을 ZIP에 넣은 뒤 설치합니다. 데이터베이스는 플러그인 디렉터리에 넣지 마세요.
+`pnpm build`는 프론트엔드를, `pnpm package`는 실행용 ZIP과 별도 소스 ZIP을 만듭니다. 데이터베이스는 플러그인 디렉터리에 넣지 마세요.
 
 </details>
 
@@ -157,4 +160,4 @@ python3 -m unittest discover -s tests -v
 
 [BSD 3-Clause](../../LICENSE)는 이 프로젝트의 소프트웨어에 적용됩니다. Copyright (c) 2026, Zachary. 이것은 독립 플러그인이며 Valve, SteamOS, Decky의 공식 프로젝트가 아닙니다.
 
-전체 페이지 화면에서 **설정 → 오픈 소스 라이선스**를 열면 저작자 표시와 원문을 오프라인으로 읽을 수 있습니다. 빌드 시 실제 포함 코드를 식별하고 호스트/시스템 구성 요소와 아이콘·그래픽을 구분합니다. 타사 코드는 자체 조건을 유지하며 Valve CAD 기반 그래픽에는 BSD가 아닌 별도의 **CC-BY-NC-SA-4.0**가 적용됩니다. 원문은 [`licenses/`](../../licenses/)에 있습니다. 설치 패키지에는 해당 앱/Decky API 소스와 [재빌드 안내](../../licenses/REBUILD.txt)를 담은 `dist/notices.json` 및 `dist/license-sources.zip`이 포함됩니다.
+전체 페이지 화면에서 **설정 → 오픈 소스 라이선스**를 열면 저작자 표시와 원문을 오프라인으로 읽을 수 있습니다. 빌드 시 실제 포함 코드를 식별하고 호스트/시스템 구성 요소와 아이콘·그래픽을 구분합니다. 타사 코드는 자체 조건을 유지하며 Valve CAD 기반 그래픽에는 BSD가 아닌 별도의 **CC-BY-NC-SA-4.0**가 적용됩니다. 원문은 [`licenses/`](../../licenses/)에 있습니다. 설치 패키지에는 `dist/notices.json`이 포함됩니다. 같은 릴리스의 별도 `power-timeline-<version>-sources.zip`에 해당 앱/Decky API 소스와 [재빌드 안내](../../licenses/REBUILD.txt)가 있습니다.

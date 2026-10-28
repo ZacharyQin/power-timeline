@@ -16,6 +16,38 @@
 - 将 tag 发版拆为独立的 **Release** workflow，复用现有检查与构建流程。逐个推送的每个 `v*` tag 都生成可安装 ZIP，并以该版本完整的双语更新章节发布；main 分支和拉取请求仅构建，不发布 Release。
 - 发布时必须已存在对应远端 tag；自动发布流程不代建或改指向版本 tag。
 
+## 0.3.13 — 2026-10-28
+
+### English
+
+- Include daily battery-health history and account-scoped persistent game icons from the preceding development build. Health observations remain independent of rolling timeline retention; saved icons can be reused after their original artwork disappears.
+- Archive native icons served from Steam's current `community_assets/images/apps` path as well as its older public-image path. Keep the fixed Steam download origin, exact AppID/image-hash checks and account-scoped stored bytes. Fixes visible game icons not being saved for later reuse.
+- Keep the battery-health plot at a fixed 132-pixel height, with coordinates sized to its actual width and fewer date labels in narrow layouts. Prevent large displays from enlarging the chart and its text while preserving real history, range selection and scrubbing.
+- Share explicit runtime/source manifests and archive exclusions between local and CI packaging. Exclude authoring GLB/projection files, caches and debug output; preserve runtime images, notices and matching Decky API rebuild sources. Validate source freshness and publish only the exact generated runtime/source ZIP pair.
+- Replace the three hardware PNG layers with lossless WebP, preserving visible pixels and transparency. Keep only executable code, WebP assets, Loader metadata and essential offline notices in the install ZIP; provide matching sources separately with a version-specific download link. Disable release source maps and exclude documentation, old PNGs and duplicate license files from the runtime package.
+
+### 中文
+
+- 本版本一并交付此前开发版的每日电池健康度历史与按账户隔离的游戏图标持久缓存。健康度独立于功率历史滚动保留，原图来源失效后可回退已存图标。
+- 补齐 Steam 当前 `community_assets/images/apps` 原生图标路径，同时保留旧公共图片路径支持。下载仍限定固定 Steam 来源、精确 AppID／图片哈希与账户隔离，修复图标已显示却未保存、无法在来源消失后复用的问题。
+- 健康度图表固定为 132 像素高，按实际宽度绘制坐标，窄布局减少日期刻度，避免大屏把图表与文字一起放大；保留真实历史、范围选择和游标操作。
+- 本地与 CI 共用明确的运行包／源码包清单和排除规则，去除设计 GLB／投影文件、缓存和调试产物；保留运行图片、许可声明与匹配的 Decky API 重建源码。打包前校验源码归档是否最新，构建产物只上传本次生成的安装／源码 ZIP 对。
+- 三张硬件 PNG 图层改为无损 WebP，保留可见像素与透明度。安装 ZIP 仅保留运行代码、WebP、Loader 元数据与必要离线许可内容；匹配源码单独交付并提供对应版本下载入口。关闭发布 source map，排除运行包中的文档、旧 PNG 和重复许可文件。
+
+## 0.3.12 — 2026-10-28
+
+### English
+
+- Add a daily battery-health curve to Power and battery, with 30-day, 90-day, one-year and all-history views. Keep the last valid full-charge/design capacity ratio per device-local calendar day in `battery-health.sqlite3`, independently of open pages and rolling power-history retention. Preserve above-100% readings and leave unobserved days disconnected. Health-history failures do not stop power recording.
+- Persist successfully displayed custom and native game icons by Steam account and AppID in `game-icons.sqlite3`. Continue trying current custom and native artwork first, then use the saved image before the gamepad placeholder when the originals disappear. Cached bytes survive frontend reloads and backend restarts without relying on the old file path or URL.
+- Bound icon reads and archived images, restrict native downloads to fixed public Steam icon identities, verify saved image integrity, and keep the previous image if archiving fails. Preserve recorded game/session identities and energy statistics.
+
+### 中文
+
+- 电源与电池内页增加电池健康度曲线，支持 30 天、90 天、1 年和全部历史。在 `battery-health.sqlite3` 按设备本地日历日保留当天最后一次有效满充／设计容量比；页面关闭后仍记录，功率历史滚动淘汰不删除健康度历史。保留超过 100% 的读数，缺失日期断线；健康度记录失败不停止功率录制。
+- 将成功显示的自定义及原生游戏图标按 Steam 账户和 AppID 持久保存至 `game-icons.sqlite3`。优先尝试当前自定义图与原生图，原来源失效时使用已保存图片，最后才显示手柄占位。缓存保存图片本身，跨前端重载和后端重启保留，不依赖旧文件路径或 URL。
+- 限制图标读取与存储体积，原生图下载仅接受固定的 Steam 公共图标身份，校验缓存完整性，保存失败时保留原有图片。不改历史游戏／会话身份和能量统计。
+
 ## 0.3.11 — 2026-10-27
 
 ### English

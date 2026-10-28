@@ -40,4 +40,5 @@ jobs:
           end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
           Path("release-notes.md").write_text("\n".join(lines[start:end]).strip() + "\n", encoding="utf-8")
           PY
-          gh release create "$tag" dist/*.zip --verify-tag --repo "$GITHUB_REPOSITORY" --title "$tag" --notes-file release-notes.md
+          version="${tag#v}"
+          gh release create "$tag" "dist/power-timeline-${version}.zip" "dist/power-timeline-${version}-sources.zip" --verify-tag --repo "$GITHUB_REPOSITORY" --title "$tag" --notes-file release-notes.md

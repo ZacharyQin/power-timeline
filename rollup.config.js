@@ -6,7 +6,7 @@ function frontAssets() {
   return {
     name: "front-assets",
     generateBundle() {
-      for (const name of ["front-hardware.png", "front-rotor.png", "front-fan-front.png"]) {
+      for (const name of ["front-hardware.webp", "front-rotor.webp", "front-fan-front.webp"]) {
         this.emitFile({
           type: "asset",
           fileName: name,
@@ -17,4 +17,6 @@ function frontAssets() {
   };
 }
 
-export default deckyPlugin({ plugins: [frontAssets(), licenseNotices()] });
+const config = deckyPlugin({ plugins: [frontAssets(), licenseNotices()] });
+config.output = { ...config.output, sourcemap: false };
+export default config;

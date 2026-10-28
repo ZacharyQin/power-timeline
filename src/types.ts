@@ -167,6 +167,20 @@ export interface ChargeEstimate {
   error: string | null;
 }
 
+export interface BatteryHealthPoint {
+  day: string;
+  observed_at: number;
+  health_percent: number;
+  full_capacity: number;
+  design_capacity: number;
+  capacity_unit: "mAh" | "Wh";
+}
+
+export interface BatteryHealthHistory {
+  points: BatteryHealthPoint[];
+  error: string | null;
+}
+
 export interface PowerInfo {
   timestamp: number;
   battery: {
@@ -196,6 +210,11 @@ export interface PowerInfo {
   thermals: { chip_c: number | null; battery_c: number | null; wireless_c: number | null; ssd_c: number | null; fan_rpm: number | null };
   estimate: ChargeEstimate;
   errors: Record<string, string>;
+}
+
+export interface SourceArchive {
+  name: string;
+  url: string;
 }
 
 export interface LicenseEntry {

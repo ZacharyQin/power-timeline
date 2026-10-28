@@ -24,6 +24,8 @@ This picture is the Quick Access menu while the Deck is plugged in. It shows the
 
 Compare the current full-charge capacity, design capacity, and capacity ratio for a reference when checking for capacity loss. This is about how much the battery can hold when full, not how much charge is left right now.
 
+On **Power and battery**, the **Battery health history** curve shows the full-charge/design capacity ratio over 30 days, 90 days, one year or all recorded days. The backend keeps the last valid reading for each local calendar day, including with the page closed. Daily health history is stored separately in `battery-health.sqlite3` and survives rolling power-history cleanup; unobserved days stay disconnected.
+
 **How does the battery drain while idle and while gaming?**
 
 Look back over the last 1, 3, or 7 days of battery level alongside game activity, power-source changes, and sleep periods to see when the charge dropped and what was happening then. For sleep periods, you can compare the battery levels before and after sleep; there is no continuous sampling or energy calculation during that interval. Game history also shows each game’s energy estimate.
@@ -48,7 +50,7 @@ If Decky is not installed, follow the official [Decky Loader](https://github.com
 
 ### Download the package
 
-Open the [latest release](https://github.com/ZacharyQin/power-timeline/releases/latest). Download the asset whose name starts with `power-timeline-` and ends with `.zip`. Do not download Source code (zip). That archive is the source tree, and Decky cannot install it.
+Open the [latest release](https://github.com/ZacharyQin/power-timeline/releases/latest). Download `power-timeline-<version>.zip` for installation. The separate `power-timeline-<version>-sources.zip` is for rebuilding. Do not download Source code (zip). That archive is the source tree, and Decky cannot install it.
 
 If you downloaded the ZIP on another computer, copy it onto the Steam Deck.
 
@@ -62,7 +64,7 @@ The menu names below are the English labels in Decky's interface. This plugin is
 4. Developer then appears in the list on the left. Open it.
 5. Under Third-Party Plugins, find Install Plugin from ZIP File and select Browse.
 6. The dialog says the Decky team has not reviewed this plugin. The first time, wait about 5 seconds before you can continue.
-7. Select the ZIP whose name starts with `power-timeline-`.
+7. Select `power-timeline-<version>.zip`.
 
 After it is installed, go back to the list under the plug icon and open **Power Timeline**.
 
@@ -88,7 +90,7 @@ The first time it is turned on, there is no earlier history. Use from before it 
 
 Charts obey their sample budget: 288 in QAM and 600 on timeline and session-detail pages. They retain real endpoints, boundaries and extrema when the budget permits. If those exceed the budget, omitted boundaries stay disconnected rather than creating false continuity. Events, energy and covered time still use the complete history.
 
-Steam and non-Steam games use their current Steam library names and custom icons throughout QAM, history and timelines. Saved shortcut names also fill matching existing records without creating another session or changing energy totals. If library metadata is unavailable, the recorded name remains; unavailable icons fall back to a gamepad.
+Steam and non-Steam games use their current Steam library names and custom icons throughout QAM, history and timelines. Saved shortcut names also fill matching existing records without creating another session or changing energy totals. If library metadata is unavailable, the recorded name remains. Successfully displayed icons are saved per Steam account and game in `game-icons.sqlite3`. Current custom and native icons take priority; when their sources disappear, the saved image is used before the gamepad placeholder, including after plugin restarts.
 
 <details>
 <summary>Touchscreen and other controls</summary>
@@ -147,9 +149,10 @@ pnpm install --registry=https://registry.npmjs.org
 pnpm typecheck
 pnpm build
 python3 -m unittest discover -s tests -v
+pnpm package
 ```
 
-`pnpm build` writes the frontend. Pack the runtime files into the ZIP. Do not put the database in the plugin directory.
+`pnpm build` writes the frontend. `pnpm package` creates the runtime ZIP and separate matching-source ZIP. Do not put the database in the plugin directory.
 
 </details>
 
@@ -157,4 +160,4 @@ python3 -m unittest discover -s tests -v
 
 [BSD 3-Clause](./LICENSE) covers this project's software. Copyright (c) 2026, Zachary. This is an independent plugin, not an official Valve, SteamOS, or Decky project.
 
-Open **Settings → Open-source licenses** inside the full-page interface to read component attribution and original license texts offline. The build derives the list from bundled code and separates host/system components and icon/artwork licenses. Third-party code retains its own terms; the Valve-CAD-derived hardware artwork is under separate **CC-BY-NC-SA-4.0** terms, not BSD. Original notices are in [`licenses/`](./licenses/), and the installed package includes `dist/notices.json` and `dist/license-sources.zip` with matching application/Decky API source and [rebuild instructions](./licenses/REBUILD.txt).
+Open **Settings → Open-source licenses** inside the full-page interface to read component attribution and original license texts offline. The build derives the list from bundled code and separates host/system components and icon/artwork licenses. Third-party code retains its own terms; the Valve-CAD-derived hardware artwork is under separate **CC-BY-NC-SA-4.0** terms, not BSD. Original notices are in [`licenses/`](./licenses/), and the installed package includes `dist/notices.json`. The same release provides `power-timeline-<version>-sources.zip` with matching application/Decky API source and [rebuild instructions](./licenses/REBUILD.txt).

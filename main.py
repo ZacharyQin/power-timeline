@@ -14,6 +14,7 @@ import decky
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from py_modules.attribution import Attribution
+from py_modules.battery_health import BatteryHealth
 from py_modules.games import GameTracker
 from py_modules.game_icons import GameIcons
 from py_modules.recorder import Recorder, discontinuity
@@ -28,6 +29,9 @@ class Plugin:
     async def _main(self):
         self._ready = asyncio.Event()
         self._task = None
+        self._health_task = None
+        self._battery_health = None
+        self._health_error = None
         self._stopping = False
         self._history_lock = asyncio.Lock()
         self._failure = None
@@ -49,12 +53,14 @@ class Plugin:
             recorder.start()
             self._recorder = recorder
             self._tracker = GameTracker()
-            self._game_icons = GameIcons(self._tracker.steam_root)
+            self._game_icons = GameIcons(self._tracker.steam_root, Path(runtime))
             self._telemetry = Telemetry()
             self._power_info = PowerInfo(self._telemetry)
             self._power_flow = PowerFlow(self._telemetry)
             self._attribution = Attribution()
             self._task = asyncio.create_task(self._record_loop())
+            self._battery_health = BatteryHealth(Path(runtime))
+            self._health_task = asyncio.create_task(self._record_health_loop())
             decky.logger.info("Power Timeline recorder started")
             try:
                 self._sailing = SailingController(Path(runtime) / "sailing", self._telemetry, self._emit_sailing)
@@ -125,6 +131,30 @@ class Plugin:
             except Exception:
                 pass
 
+    async def _record_health_loop(self):
+        while not self._stopping:
+            batteries = self._telemetry.batteries
+            battery = batteries[0] if len(batteries) == 1 else None
+            worker = asyncio.create_task(asyncio.to_thread(self._battery_health.record, battery, time.time()))
+            try:
+                # Drain an in-flight write before unload releases recorder ownership.
+                await asyncio.shield(worker)
+                self._health_error = None
+            except asyncio.CancelledError:
+                await asyncio.gather(worker, return_exceptions=True)
+                raise
+            except Exception as exc:
+                self._health_error = str(exc)
+                decky.logger.exception("Battery health history update failed; power recording remains active")
+            await asyncio.sleep(60)
+
+    async def get_battery_health(self):
+        await self._require_recorder()
+        if self._battery_health is None:
+            raise RuntimeError("Battery health history is unavailable")
+        points = await asyncio.to_thread(self._battery_health.history)
+        return {"points": points, "error": self._health_error}
+
     async def _require_recorder(self):
         ready = getattr(self, "_ready", None)
         if ready is None:
@@ -176,9 +206,13 @@ class Plugin:
     async def get_session_detail(self, session_id, max_points=600):
         return await self._query_history(Recorder.session_detail, session_id, max_points)
 
-    async def get_game_icon(self, app_id, account_id, revision=None):
+    async def get_game_icon(self, app_id, account_id, revision=None, cache_only=False):
         await self._require_recorder()
-        return await asyncio.to_thread(self._game_icons.read, app_id, account_id, revision)
+        return await asyncio.to_thread(self._game_icons.read, app_id, account_id, revision, cache_only)
+
+    async def remember_game_icon(self, app_id, account_id, source):
+        await self._require_recorder()
+        return await asyncio.to_thread(self._game_icons.remember, app_id, account_id, source)
 
     async def observe_games(self, games, source="", observed_at=0):
         recorder = await self._require_recorder()
@@ -242,13 +276,13 @@ class Plugin:
                 await sailing.close()
             except Exception:
                 decky.logger.exception("Sailing Mode restoration failed during unload")
-        task = getattr(self, "_task", None)
-        if task:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+        for task in (getattr(self, "_task", None), getattr(self, "_health_task", None)):
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         history_lock = getattr(self, "_history_lock", None)
         if history_lock is not None:
             async with history_lock:

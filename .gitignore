@@ -6,3 +6,20 @@ __pycache__/
 *.py[cod]
 *.sqlite*
 .DS_Store
+
+# Local archives, tooling caches and editor output.
+*.zip
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+coverage/
+htmlcov/
+.env
+.env.*
+!.env.example

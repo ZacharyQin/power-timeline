@@ -30,6 +30,9 @@ test("current shortcut icons beat stale grid artwork while Steam custom artwork 
     assert.equal(gameIconSources({ icon_data: "current", icon_data_format: "ico" }, saved)[0], native);
     assert.equal(gameIconSources({ icon_hash: "store-default" }, saved)[0], saved);
     assert.equal(gameIconSources(null, saved)[0], saved);
+    assert.equal(gameIconSources({ icon_hash: "store-default" }, saved, true).at(-1), saved);
+    assert.equal(gameIconSources({ icon_hash: "store-default" }, saved, true).at(-2), "https://shared.steamstatic.com/store-default.jpg");
+    assert.equal(gameIconSources(null, saved, true)[0], saved);
   } finally {
     if (descriptor) Object.defineProperty(globalThis, "window", descriptor);
     else delete globalThis.window;

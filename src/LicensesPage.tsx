@@ -6,7 +6,7 @@ import { PageQueryStatus, PageReading } from "./FullPage";
 import { useQuery } from "./data";
 import { t } from "./i18n";
 import { updateView, useView } from "./viewState";
-import type { LicenseEntry } from "./types";
+import type { LicenseEntry, SourceArchive } from "./types";
 
 const groups = ["project", "bundled", "icons", "host", "artwork"] as const;
 const noteKeys = { rebuild: "licenses.rebuildNote", "font-awesome": "licenses.fontAwesomeNote", artwork: "licenses.artworkNote" } as const;
@@ -57,7 +57,7 @@ function LicenseDocument({ title, text, component }: { title: string; text: stri
   </section>;
 }
 
-function LicenseContent({ entries }: { entries: LicenseEntry[] }) {
+function LicenseContent({ entries, sourceArchive }: { entries: LicenseEntry[]; sourceArchive?: SourceArchive }) {
   const view = useView();
   const entry = entries.find(item => item.id === view.licenses.entry);
   if (view.licenses.entry && !entry) return <p role="alert">{t("licenses.missing")}</p>;
@@ -75,6 +75,9 @@ function LicenseContent({ entries }: { entries: LicenseEntry[] }) {
       {entry.note && <p className="pt-muted">{t(noteKeys[entry.note])}</p>}
       <LicenseRow id="license-source" title={t("licenses.source")} description={entry.source}
         onClick={() => Navigation.NavigateToExternalWeb(entry.source)} />
+      {sourceArchive && (entry.id === "project" || entry.note === "rebuild") && <LicenseRow
+        id="license-matching-source" title={t("licenses.matchingSource")} description={sourceArchive.name}
+        onClick={() => Navigation.NavigateToExternalWeb(sourceArchive.url)} />}
       <h2 className="pt-section-title">{t("licenses.documents")}</h2>
       {entry.documents.map((doc, index) => <LicenseRow key={index} id={`license-document-${index}`} title={doc.title}
         description={t("licenses.read")} onClick={() => updateView({ licenses: { ...view.licenses, document: index }, focus: "license-paragraph-0" })} />)}
@@ -104,6 +107,6 @@ export function LicensesPage() {
       .pt-license-details .pt-reading-value { min-width: 0; overflow-wrap: anywhere; }
     `}</style>
     <PageQueryStatus loading={query.loading && !query.data} error={query.error} retry={query.refresh} />
-    {query.data && <LicenseContent entries={query.data.entries} />}
+    {query.data && <LicenseContent entries={query.data.entries} sourceArchive={query.data.sourceArchive} />}
   </div>;
 }

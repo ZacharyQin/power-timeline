@@ -1,8 +1,9 @@
 import { callable } from "@decky/api";
-import type { Detail, FanStatus, History, LicenseEntry, Metric, PowerInfo, SailingStatus, Snapshot, Sort, Timeline } from "./types";
+import type { BatteryHealthHistory, Detail, FanStatus, History, LicenseEntry, Metric, PowerInfo, SailingStatus, Snapshot, Sort, SourceArchive, Timeline } from "./types";
 
-export const getOpenSourceNotices = callable<[], { entries: LicenseEntry[] }>("get_open_source_notices");
-export const getGameIcon = callable<[app_id: string, account_id: string, revision?: string], { revision: string; source?: string | null }>("get_game_icon");
+export const getOpenSourceNotices = callable<[], { entries: LicenseEntry[]; sourceArchive?: SourceArchive }>("get_open_source_notices");
+export const getGameIcon = callable<[app_id: string, account_id: string, revision?: string, cache_only?: boolean], { revision: string; source?: string | null; cached?: boolean }>("get_game_icon");
+export const rememberGameIcon = callable<[app_id: string, account_id: string, source: string], { stored: boolean; revision: string }>("remember_game_icon");
 
 export const getFanStatus = callable<[], FanStatus>("get_fan_status");
 export const setFanMode = callable<[mode: "automatic" | "maximum"], FanStatus>("set_fan_mode");
@@ -13,6 +14,7 @@ export const setSailingMode = callable<[enabled: boolean, delta_percent: number]
 
 export const getSnapshot = callable<[], Snapshot>("get_snapshot");
 export const getPowerInfo = callable<[refresh_contract?: boolean], PowerInfo>("get_power_info");
+export const getBatteryHealth = callable<[], BatteryHealthHistory>("get_battery_health");
 export const getTimeline = callable<[start: number, end: number, max_points?: number, bucket_seconds?: number], Timeline>("get_timeline");
 export const getGameHistory = callable<[
   game_id?: string | null,

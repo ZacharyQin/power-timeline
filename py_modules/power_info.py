@@ -7,6 +7,8 @@ import shlex
 import time
 from pathlib import Path
 
+from .battery_health import capacity_ratio
+
 
 UP_PROPERTIES = (
     ("NativePath", "s"), ("UpdateTime", "t"), ("State", "u"),
@@ -275,7 +277,7 @@ class PowerInfo:
         capacity = self._upower.get("Capacity") if upower_fresh else None
         if capacity is not None and not 0 < capacity <= 100:
             capacity = None
-        ratio = charge_full / charge_design * 100 if charge_full is not None and charge_design is not None else energy_full / energy_design * 100 if energy_full is not None and energy_design is not None else None
+        ratio = capacity_ratio(charge_full, charge_design, energy_full, energy_design)
         return {
             "timestamp": current["timestamp"],
             "battery": {"model": text(attribute("model_name"), "model"),

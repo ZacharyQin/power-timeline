@@ -220,9 +220,9 @@ export function QamThermal({ thermals, active }: { thermals: Thermals | null; ac
   return <div aria-hidden={failed}>
     <div className="pt-qam-thermal" style={{ aspectRatio: `${DECK_VIEW.w} / ${thermalHostMm}` }}>
       <div className="pt-qam-thermal-art" ref={art}>
-        <img alt="" className="pt-qam-hardware" src={`${ART}/front-hardware.png`} style={layerStyle(ART_LAYERS.hardware)} onError={() => setFailed(true)} />
-        <img alt="" className="pt-qam-rotor" ref={rotor} src={`${ART}/front-rotor.png`} style={{ ...layerStyle(ART_LAYERS.rotor), transformOrigin: `${(ROTOR.x - ART_LAYERS.rotor.x) / ART_LAYERS.rotor.w * 100}% ${(ROTOR.y - ART_LAYERS.rotor.y) / ART_LAYERS.rotor.h * 100}%` }} />
-        <img alt="" className="pt-qam-fan-front" src={`${ART}/front-fan-front.png`} style={layerStyle(ART_LAYERS.fan)} />
+        <img alt="" className="pt-qam-hardware" src={`${ART}/front-hardware.webp`} style={layerStyle(ART_LAYERS.hardware)} onError={() => setFailed(true)} />
+        <img alt="" className="pt-qam-rotor" ref={rotor} src={`${ART}/front-rotor.webp`} style={{ ...layerStyle(ART_LAYERS.rotor), transformOrigin: `${(ROTOR.x - ART_LAYERS.rotor.x) / ART_LAYERS.rotor.w * 100}% ${(ROTOR.y - ART_LAYERS.rotor.y) / ART_LAYERS.rotor.h * 100}%` }} />
+        <img alt="" className="pt-qam-fan-front" src={`${ART}/front-fan-front.webp`} style={layerStyle(ART_LAYERS.fan)} />
       </div>
       <div className="pt-qam-thermal-overlay" ref={overlay}>
         <canvas ref={canvas} />

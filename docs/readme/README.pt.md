@@ -24,6 +24,8 @@ Esta imagem é o menu de acesso rápido com o aparelho ligado à corrente. Mostr
 
 Compara a capacidade atual de carga completa, a capacidade de projeto e a relação entre ambas para teres uma referência ao verificar se a bateria perdeu capacidade. O que interessa aqui é quanto consegue guardar quando está cheia, não a carga que resta neste momento.
 
+Em **Energia e bateria**, a curva do histórico da saúde da bateria mostra a relação carga completa/projeto nos últimos 30 dias, 90 dias, um ano ou em todos os dias registados. O backend guarda a última leitura válida de cada dia do calendário local, mesmo com a página fechada. O histórico diário fica separado em `battery-health.sqlite3` e é mantido quando o histórico de energia mais antigo é removido; os dias sem registo ficam separados na curva.
+
 **Como se gasta a bateria com a Steam Deck parada e a jogar?**
 
 Revê o nível da bateria no último dia, nos últimos 3 dias ou nos últimos 7 dias, juntamente com a atividade dos jogos, as mudanças de alimentação e os períodos de suspensão. Assim podes ver quando a carga caiu mais e o que estava a acontecer. Nos períodos de suspensão, podes comparar a carga antes e depois; não há amostragem contínua nem cálculo de energia durante esse intervalo. O histórico de jogos também mostra a estimativa de energia de cada jogo.
@@ -48,7 +50,7 @@ Se o Decky não estiver instalado, segue as instruções oficiais do [Decky Load
 
 ### Descarregar o pacote
 
-Abre a [release mais recente](https://github.com/ZacharyQin/power-timeline/releases/latest). Descarrega o ficheiro cujo nome começa por `power-timeline-` e acaba em `.zip`. Não descarregues Source code (zip). Esse arquivo é o código-fonte, e o Decky não o instala.
+Abre a [release mais recente](https://github.com/ZacharyQin/power-timeline/releases/latest). Descarrega `power-timeline-<version>.zip` para instalar. O arquivo separado `power-timeline-<version>-sources.zip` destina-se à recompilação. Não descarregues Source code (zip). Esse arquivo é o código-fonte, e o Decky não o instala.
 
 Se descarregaste o ZIP noutro computador, copia-o para a Steam Deck.
 
@@ -62,7 +64,7 @@ Os nomes abaixo são os do Decky em português de Portugal. Se o Decky estiver e
 4. Programador passa a aparecer na lista à esquerda. Abre-o.
 5. Em Plugins de terceiros, encontra Instalar plugin a partir de um ficheiro ZIP e escolhe Navegar.
 6. A caixa diz que a equipa do Decky não reviu este plugin. Da primeira vez, espera cerca de 5 segundos antes de continuares.
-7. Escolhe o ZIP cujo nome começa por `power-timeline-`.
+7. Escolhe `power-timeline-<version>.zip`.
 
 Depois de instalado, volta à lista sob o ícone da ficha e abre **Power Timeline**.
 
@@ -88,7 +90,7 @@ Na primeira vez não há histórico anterior. O uso de antes de ligar o plugin n
 
 Os gráficos respeitam o limite de amostras: 288 no QAM e 600 nas páginas da linha temporal e dos detalhes da sessão. Mantêm os extremos temporais, os limites e os valores extremos reais quando cabem. Se não couberem, os limites omitidos continuam desligados, sem criar continuidade falsa. Os eventos, a energia e o tempo coberto continuam a usar o histórico completo.
 
-Os jogos Steam e não Steam usam os nomes atuais e os ícones personalizados da biblioteca Steam no QAM, no histórico e nas linhas temporais. Os nomes guardados nos atalhos também preenchem os registos existentes correspondentes, sem criar sessões nem alterar os totais de energia. Se os dados da biblioteca não estiverem disponíveis, mantém-se o nome registado; os ícones indisponíveis são substituídos por um comando.
+Os jogos Steam e não Steam usam os nomes atuais e os ícones personalizados da biblioteca Steam no QAM, no histórico e nas linhas temporais. Os nomes guardados nos atalhos também preenchem os registos existentes correspondentes, sem criar sessões nem alterar os totais de energia. Se os dados da biblioteca não estiverem disponíveis, mantém-se o nome registado. Os ícones apresentados com sucesso são guardados por conta Steam e jogo em `game-icons.sqlite3`. Os ícones personalizados e nativos atuais têm prioridade; se as suas origens desaparecerem, usa-se a imagem guardada antes do comando de substituição, mesmo após reiniciar o plugin.
 
 <details>
 <summary>Ecrã tátil e outros controlos</summary>
@@ -147,9 +149,10 @@ pnpm install --registry=https://registry.npmjs.org
 pnpm typecheck
 pnpm build
 python3 -m unittest discover -s tests -v
+pnpm package
 ```
 
-`pnpm build` gera a interface. Mete os ficheiros de execução no ZIP antes de instalar. Não ponhas a base de dados na pasta do plugin.
+`pnpm build` gera a interface; `pnpm package` cria o ZIP de execução e o ZIP de fontes separado. Não ponhas a base de dados na pasta do plugin.
 
 </details>
 
@@ -157,4 +160,4 @@ python3 -m unittest discover -s tests -v
 
 [BSD 3-Clause](../../LICENSE) aplica-se ao software deste projeto. Copyright (c) 2026, Zachary. Este é um plugin independente, não um projeto oficial da Valve, do SteamOS ou do Decky.
 
-Na interface de página completa, abra **Definições → Licenças de código aberto** para ler atribuições e textos originais offline. A compilação identifica o código incluído e distingue componentes do anfitrião/sistema, ícones e gráficos. O código de terceiros mantém os seus termos; os gráficos derivados do CAD da Valve têm termos próprios **CC-BY-NC-SA-4.0**, não BSD. Os avisos originais estão em [`licenses/`](../../licenses/). O pacote instalado inclui `dist/notices.json` e `dist/license-sources.zip`, com o código correspondente da aplicação/Decky API e [instruções de recompilação](../../licenses/REBUILD.txt).
+Na interface de página completa, abra **Definições → Licenças de código aberto** para ler atribuições e textos originais offline. A compilação identifica o código incluído e distingue componentes do anfitrião/sistema, ícones e gráficos. O código de terceiros mantém os seus termos; os gráficos derivados do CAD da Valve têm termos próprios **CC-BY-NC-SA-4.0**, não BSD. Os avisos originais estão em [`licenses/`](../../licenses/). O pacote instalado inclui `dist/notices.json`. A mesma release fornece `power-timeline-<version>-sources.zip`, com o código correspondente da aplicação/Decky API e [instruções de recompilação](../../licenses/REBUILD.txt).

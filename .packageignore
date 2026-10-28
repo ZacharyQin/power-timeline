@@ -1,0 +1,29 @@
+# POSIX paths relative to the archive root. Applied independently of Git tracking.
+# Authoring assets are retained in the repository, not needed by the plugin build.
+src/front-projection.svg
+licenses/assets/*.glb
+src/assets/front-hardware.png
+src/assets/front-rotor.png
+src/assets/front-fan-front.png
+
+# Local state, caches, debug output and editor files.
+**/node_modules/**
+**/.git/**
+**/.pytest_cache/**
+**/.mypy_cache/**
+**/.ruff_cache/**
+**/coverage/**
+**/htmlcov/**
+**/__pycache__/**
+**/.DS_Store
+**/.env
+**/.env.*
+**/*.py[cod]
+**/*.map
+**/*.log
+**/*.tmp
+**/*.tmp.*
+**/*.bak
+**/*.swp
+**/*~
+**/*.sqlite*
