@@ -1,8 +1,16 @@
 name: Release
 
+run-name: Release ${{ inputs.tag || github.ref_name }}
+
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build and release
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,14 +18,18 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: actions/download-artifact@v4
         with:
           name: power-timeline
@@ -25,13 +37,14 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
+          tag="$RELEASE_TAG"
           python3 - <<'PY'
           import os
           import sys
           from pathlib import Path
-          version = os.environ["GITHUB_REF"].removeprefix("refs/tags/v")
+          version = os.environ["RELEASE_TAG"].removeprefix("v")
           lines = Path("CHANGELOG.md").read_text(encoding="utf-8").splitlines()
           prefix = f"## {version}"
           start = next((i for i, line in enumerate(lines) if line == prefix or line.startswith(prefix + " ")), None)

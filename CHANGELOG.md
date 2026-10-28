@@ -10,11 +10,13 @@
 
 - Separate tag publishing into a dedicated **Release** workflow that reuses the existing checked build pipeline. Each individually pushed `v*` tag produces an installable ZIP and publishes it with that version's complete bilingual changelog section; main-branch and pull-request builds do not publish releases.
 - Require the tag to exist remotely when publishing. Automated release creation does not create or retarget version tags.
+- Recover an owner-approved existing tag through **Release → Run workflow** on `main`, supplying the version tag, or run `gh workflow run release.yml --repo ZacharyQin/power-timeline --ref main -f tag=v0.3.11`. Build and publication both check out that tag; package-version validation and the complete bilingual notes use the selected tag. Isolate build concurrency by tag so parallel recoveries do not cancel each other.
 
 ### 中文
 
 - 将 tag 发版拆为独立的 **Release** workflow，复用现有检查与构建流程。逐个推送的每个 `v*` tag 都生成可安装 ZIP，并以该版本完整的双语更新章节发布；main 分支和拉取请求仅构建，不发布 Release。
 - 发布时必须已存在对应远端 tag；自动发布流程不代建或改指向版本 tag。
+- 已获所有者授权的已有 tag 可通过 **Release → Run workflow** 在 `main` 上填写版本 tag 补跑，也可执行 `gh workflow run release.yml --repo ZacharyQin/power-timeline --ref main -f tag=v0.3.11`。构建与发布均检出指定 tag，按其校验包版本并提取完整双语说明；构建并发按 tag 隔离，多个版本同时补跑不会互相取消。
 
 ## 0.3.13 — 2026-10-28
 
